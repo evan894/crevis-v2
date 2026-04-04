@@ -1,10 +1,25 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { Database } from '@/types/database.types';
 
-export async function GET() {
-  const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
-  const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/slack/callback`;
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const sellerId = url.searchParams.get('sellerId');
   
-  const slackAuthUrl = `https://slack.com/oauth/v2/authorize?client_id=${SLACK_CLIENT_ID}&scope=chat:write,chat:write.public&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
+  if (!sellerId) {
+    return NextResponse.json({ error: 'sellerId is required' }, { status: 400 });
+  }
+
+  const clientId = process.env.SLACK_CLIENT_ID;
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/slack/callback`;
+  const scope = 'chat:write,im:write,users:read';
   
-  return NextResponse.redirect(slackAuthUrl);
+  // Provide sellerId in the state parameter
+  const state = sellerId;
+  
+  const slackOAuthUrl = `https://slack.com/oauth/v2/authorize?client_id=${clientId}&scope=${scope}&redirect_uri=${redirectUri}&state=${state}`;
+
+  return NextResponse.redirect(slackOAuthUrl);
 }

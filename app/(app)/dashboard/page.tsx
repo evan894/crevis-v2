@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@/lib/supabase";
-import { ShoppingBag, Wallet, PackageOpen, TrendingUp, AlertTriangle, X } from "lucide-react";
+import { ShoppingBag, Wallet, PackageOpen, TrendingUp, AlertTriangle, X, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { Database } from "@/types/database.types";
 
@@ -25,6 +25,7 @@ export default function DashboardPage() {
   
   const [loading, setLoading] = useState(true);
   const [sellerId, setSellerId] = useState<string | null>(null);
+  const [slackConnected, setSlackConnected] = useState(false);
   
   const [stats, setStats] = useState({
      shopName: "",
@@ -43,10 +44,11 @@ export default function DashboardPage() {
        const { data: { user } } = await supabase.auth.getUser();
        if (!user) return;
        
-       const { data: seller } = await supabase.from('sellers').select('id, shop_name, credit_balance').eq('user_id', user.id).single();
+       const { data: seller } = await supabase.from('sellers').select('id, shop_name, credit_balance, slack_user_id').eq('user_id', user.id).single();
        if (!seller) return;
        
        setSellerId(seller.id);
+       setSlackConnected(!!seller.slack_user_id);
 
        const { count: activeListings } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('seller_id', seller.id).eq('active', true);
        
@@ -150,16 +152,33 @@ export default function DashboardPage() {
       )}
 
       {/* Top Header */}
-      <header className="px-6 py-8 md:py-10 border-b border-border bg-surface-raised">
-         <div className="max-w-6xl mx-auto">
-             {loading ? (
-                 <div className="h-8 w-64 bg-surface animate-pulse rounded"></div>
-             ) : (
-                 <h1 className="font-syne text-3xl font-bold text-ink">
-                    {greeting}, <span className="text-saffron">{stats.shopName}</span>
-                 </h1>
-             )}
-             <p className="text-ink-secondary text-sm mt-2">Here’s what’s happening with your store today.</p>
+      <header className="px-6 py-8 md:py-10 border-b border-border bg-surface-raised flex flex-col md:flex-row md:items-center justify-between gap-4">
+         <div className="max-w-6xl mx-auto w-full flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+               {loading ? (
+                   <div className="h-8 w-64 bg-surface animate-pulse rounded"></div>
+               ) : (
+                   <h1 className="font-syne text-3xl font-bold text-ink">
+                      {greeting}, <span className="text-saffron">{stats.shopName}</span>
+                   </h1>
+               )}
+               <p className="text-ink-secondary text-sm mt-2">Here’s what’s happening with your store today.</p>
+            </div>
+            {!loading && !slackConnected && sellerId && (
+               <a 
+                 href={`/api/auth/slack?sellerId=${sellerId}`}
+                 className="inline-flex items-center gap-2 bg-[#4A154B] hover:bg-[#3E113E] text-white px-4 py-2 rounded font-medium text-sm transition-colors border border-transparent"
+               >
+                 <MessageSquare className="w-4 h-4" />
+                 Connect Slack
+               </a>
+            )}
+            {!loading && slackConnected && (
+               <div className="inline-flex items-center gap-2 bg-success/10 text-success px-4 py-2 rounded font-medium text-sm border border-success/20">
+                 <MessageSquare className="w-4 h-4" />
+                 Slack Connected
+               </div>
+            )}
          </div>
       </header>
 

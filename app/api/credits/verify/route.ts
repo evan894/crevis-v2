@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 import { addCredits } from "@/lib/credits";
+import { sendSlackDM } from "@/lib/slack";
 import type { Database } from "@/types/database.types";
 
 export async function POST(request: Request) {
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { data: seller } = await supabase.from("sellers").select("id").eq("user_id", user.id).single();
+    const { data: seller } = await supabase.from("sellers").select("id, slack_access_token, slack_user_id").eq("user_id", user.id).single();
     if (!seller) return NextResponse.json({ error: "Seller profile not found" }, { status: 404 });
 
     // Verify signature
@@ -41,6 +42,18 @@ export async function POST(request: Request) {
 
     // Securely add credits via Postgres RPC
     const newBalance = await addCredits(seller.id, credits, 'credit_purchase', `Razorpay txn: ${razorpay_payment_id}`);
+
+    if (seller.slack_access_token && seller.slack_user_id) {
+       try {
+           await sendSlackDM(
+               seller.slack_access_token,
+               seller.slack_user_id,
+               `✅ Wallet recharged! ${credits} credits added.\nNew balance: ${newBalance} credits.`
+           );
+       } catch (slackErr) {
+           console.error(`Slack notification failed [Credit Purchase] [seller_id: ${seller.id}]:`, slackErr);
+       }
+    }
 
     return NextResponse.json({ success: true, newBalance });
   } catch (error: unknown) {

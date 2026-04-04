@@ -1,76 +1,70 @@
-import { NextResponse } from "next/server";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import type { Database } from "@/types/database.types";
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { Database } from '@/types/database.types';
+
+export const dynamic = 'force-dynamic';
+
+const supabaseAdmin = createClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const code = searchParams.get("code");
-  const error = searchParams.get("error");
-
-  if (error || !code) {
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/onboarding?step=2&error=slack_denied`);
+  const url = new URL(request.url);
+  const code = url.searchParams.get('code');
+  const state = url.searchParams.get('state'); // That's our sellerId
+  
+  if (!code || !state) {
+    return NextResponse.json({ error: 'Missing code or state' }, { status: 400 });
   }
 
-  const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID!;
-  const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET!;
-  const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/slack/callback`;
-
   try {
-    const slackRes = await fetch("https://slack.com/api/oauth.v2.access", {
-      method: "POST",
+    const formData = new URLSearchParams();
+    formData.append('client_id', process.env.SLACK_CLIENT_ID!);
+    formData.append('client_secret', process.env.SLACK_CLIENT_SECRET!);
+    formData.append('code', code);
+    formData.append('redirect_uri', `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/slack/callback`);
+
+    const response = await fetch('https://slack.com/api/oauth.v2.access', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        client_id: SLACK_CLIENT_ID,
-        client_secret: SLACK_CLIENT_SECRET,
-        code,
-        redirect_uri: REDIRECT_URI,
-      }),
+      body: formData.toString()
     });
 
-    const data = await slackRes.json();
-    if (!data.ok) throw new Error(data.error || "Slack auth failed");
+    const data = await response.json();
 
-    const slackAccessToken = data.access_token;
-    const slackUserId = data.authed_user.id;
+    if (!data.ok) {
+       console.error("Slack OAuth Error:", data);
+       return NextResponse.json({ error: "Failed to exchange slack token" }, { status: 400 });
+    }
 
-    const cookieStore = cookies();
-    const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-          set(name: string, value: string, options: CookieOptions) {
-            cookieStore.set({ name, value, ...options });
-          },
-          remove(name: string, options: CookieOptions) {
-            cookieStore.set({ name, value: "", ...options });
-          },
-        },
-      }
-    );
+    // data.authed_user.access_token contains the user token which has the scope
+    // data.authed_user.id contains the slack user id
+    const slackAccessToken = data.authed_user?.access_token;
+    const slackUserId = data.authed_user?.id;
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("No user found");
+    if (!slackAccessToken || !slackUserId) {
+        return NextResponse.json({ error: "No user token provided by Slack. Ensure you requested user scopes like chat:write." }, { status: 400 });
+    }
 
-    const { error: dbError } = await supabase
-      .from("sellers")
-      .update({
+    // Save to Seller record directly
+    const { error } = await supabaseAdmin.from('sellers').update({
         slack_access_token: slackAccessToken,
         slack_user_id: slackUserId,
-      })
-      .eq("user_id", user.id);
+    }).eq('id', state);
 
-    if (dbError) throw dbError;
+    if (error) {
+       console.error("Failed to save to supabase:", error);
+       return NextResponse.json({ error: "Failed to link Slack account" }, { status: 500 });
+    }
 
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/onboarding?step=2&slack_success=true`);
-  } catch (err) {
-    console.error("Slack Callback Error:", err);
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/onboarding?step=2&error=slack_exchange_failed`);
+    // Redirect to dashboard with success query param or directly back
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?slack_success=1`);
+
+  } catch (error) {
+    console.error("Exchange error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

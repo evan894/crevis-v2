@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database.types';
 import { deductCredits, deactivateSellerListings } from '@/lib/credits';
-import { slackAdmin } from '@/lib/slack';
+import { slackAdmin, sendSlackDM } from '@/lib/slack';
 import { Telegraf } from 'telegraf';
 
 const supabase = createClient<Database>(
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
        const refId = payload.reference_id || payload.description;
 
        // Find pending order
-       let orderQuery = supabase.from('orders').select('*, products(name), sellers(shop_name, slack_user_id)').eq('status', 'pending');
+       let orderQuery = supabase.from('orders').select('*, products(name), sellers(shop_name, slack_user_id, slack_access_token)').eq('status', 'pending');
        if (productId && buyerTelegramId) {
           orderQuery = orderQuery.eq('product_id', productId).eq('buyer_telegram_id', buyerTelegramId);
        } else {
@@ -68,8 +68,9 @@ export async function POST(req: Request) {
        }).eq('id', order.id);
 
        // 2. Deduct platform fee (5%)
+       let newBalance: number | null = null;
        try {
-           const new_balance = await deductCredits(
+           newBalance = await deductCredits(
                order.seller_id as string, 
                fee, 
                'order_fee', 
@@ -78,7 +79,7 @@ export async function POST(req: Request) {
                order.id
            );
            
-           if (typeof new_balance === 'number' && new_balance <= 0) {
+           if (typeof newBalance === 'number' && newBalance <= 0) {
                await deactivateSellerListings(order.seller_id as string);
            }
        } catch (feeError) {
@@ -88,6 +89,7 @@ export async function POST(req: Request) {
        // 3. Send Telegram confirmation
        const productName = Array.isArray(order.products) ? order.products[0]?.name : order.products?.name;
        const shopName = Array.isArray(order.sellers) ? order.sellers[0]?.shop_name : order.sellers?.shop_name;
+       const slackAccessToken = Array.isArray(order.sellers) ? order.sellers[0]?.slack_access_token : order.sellers?.slack_access_token;
        const slackUserId = Array.isArray(order.sellers) ? order.sellers[0]?.slack_user_id : order.sellers?.slack_user_id;
        
        try {
@@ -99,15 +101,40 @@ export async function POST(req: Request) {
            console.error("Buyer telegram notification failed", tgErr);
        }
 
-       // 4. Send Slack notification
-       if (slackUserId) {
+       // 4. Send Slack notification(s)
+       if (slackAccessToken && slackUserId) {
            try {
-               await slackAdmin.chat.postMessage({
-                   channel: slackUserId,
-                   text: `🎉 New Order Received! ₹${order.amount} for ${productName}\nBuyer: ${order.buyer_name}`
-               });
+               await sendSlackDM(
+                   slackAccessToken,
+                   slackUserId,
+                   `🛍 New order — ${productName} ₹${order.amount} from ${order.buyer_name}.\n${fee} credits deducted.`
+               );
            } catch (slackErr) {
-               console.error("Slack notification failed", slackErr);
+               console.error(`Slack notification failed [New Order] [seller_id: ${order.seller_id}]:`, slackErr);
+           }
+
+           if (typeof newBalance === 'number') {
+               if (newBalance <= 0) {
+                   try {
+                       await sendSlackDM(
+                           slackAccessToken,
+                           slackUserId,
+                           `❌ Your listings have been paused due to zero credits.\nRecharge at crevis.in/wallet`
+                       );
+                   } catch (slackErr) {
+                       console.error(`Slack notification failed [Zero Credits] [seller_id: ${order.seller_id}]:`, slackErr);
+                   }
+               } else if (newBalance < 20) {
+                   try {
+                       await sendSlackDM(
+                           slackAccessToken,
+                           slackUserId,
+                           `⚠️ Your Crevis wallet is running low (${newBalance} credits).\nRecharge to keep listings active: crevis.in/wallet`
+                       );
+                   } catch (slackErr) {
+                       console.error(`Slack notification failed [Low Credits] [seller_id: ${order.seller_id}]:`, slackErr);
+                   }
+               }
            }
        }
     }

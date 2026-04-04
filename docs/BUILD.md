@@ -407,43 +407,43 @@ Fix them one by one. Prioritize mobile experience."
 **Goal:** All four notification types working and tested.
 
 #### Session 7.1 — Slack App Setup + DM Helper (2 hours)
-- [ ] Configure Slack app (Ivan's workspace):
+- [x] Configure Slack app (Ivan's workspace):
       OAuth scopes: chat:write, im:write, users:read
-- [ ] /api/auth/slack — OAuth initiation route
-- [ ] /api/auth/slack/callback — token exchange + save to seller
-- [ ] Build sendSlackDM(slack_access_token, slack_user_id, message)
+- [x] /api/auth/slack — OAuth initiation route
+- [x] /api/auth/slack/callback — token exchange + save to seller
+- [x] Build sendSlackDM(slack_access_token, slack_user_id, message)
       helper in /lib/slack.ts
-- [ ] Test DM sends successfully to a connected seller
+- [x] Test DM sends successfully to a connected seller
 
 #### Session 7.2 — All Notification Types (2 hours)
-- [ ] New order notification (triggered in Razorpay order webhook):
+- [x] New order notification (triggered in Razorpay order webhook):
       "🛍 New order — {product_name} ₹{amount} from {buyer_name}.
       {credits} credits deducted."
-- [ ] Low credits warning (triggered after any credit deduction
+- [x] Low credits warning (triggered after any credit deduction
       that leaves balance < 20):
       "⚠️ Your Crevis wallet is running low ({balance} credits).
       Recharge to keep listings active: crevis.in/wallet"
-- [ ] Listings deactivated notification (triggered when balance hits 0):
+- [x] Listings deactivated notification (triggered when balance hits 0):
       "❌ Your listings have been paused due to zero credits.
       Recharge at crevis.in/wallet"
-- [ ] Credit purchase success (triggered in Razorpay credits webhook):
+- [x] Credit purchase success (triggered in Razorpay credits webhook):
       "✅ Wallet recharged! {credits} credits added.
       New balance: {balance} credits."
 
 #### Session 7.3 — Notification Reliability (2 hours)
-- [ ] Wrap all Slack sends in try/catch — never let Slack failure
+- [x] Wrap all Slack sends in try/catch — never let Slack failure
       break the main order flow
-- [ ] Log Slack send failures to console with seller_id + message type
-- [ ] If seller has no Slack connected: skip DM silently
-- [ ] Test all 4 notification types end-to-end with a real Slack workspace
-- [ ] Verify notifications arrive within 3 seconds of triggering event
+- [x] Log Slack send failures to console with seller_id + message type
+- [x] If seller has no Slack connected: skip DM silently
+- [x] Test all 4 notification types end-to-end with a real Slack workspace
+- [x] Verify notifications arrive within 3 seconds of triggering event
 
 #### ✅ Megasession 7 Done Checklist
-- [ ] Slack OAuth connects and saves token to seller record
-- [ ] All 4 notification types send to correct seller DM
-- [ ] Slack failure does not break order processing
-- [ ] Seller with no Slack connected: no errors thrown
-- [ ] Notification copy matches CLAUDE.md exactly
+- [x] Slack OAuth connects and saves token to seller record
+- [x] All 4 notification types send to correct seller DM
+- [x] Slack failure does not break order processing
+- [x] Seller with no Slack connected: no errors thrown
+- [x] Notification copy matches CLAUDE.md exactly
 
 ---
 
