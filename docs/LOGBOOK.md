@@ -359,3 +359,26 @@ These must never be revisited without a strong reason.
 - Supabase: Active (realtime socket subscriptions successful & verified).
 - Next.js Web: Production hardened edge-to-edge.
 - Telegram bot: Pending scaffold.
+
+---
+
+### Megasession 5 — April 4, 2026
+
+**Status:** ✅ Completed
+
+**What was built:**
+- Scaffolding of the core Telegram bot engine using `telegraf` within `/bot/index.ts`.
+- Environment abstraction logic setup to flawlessly run in polling mode locally using ES node loader flags `--env-file=.env.local --import tsx`.
+- Constructed session management via `telegraf-session-local` mapped explicitly with custom typings on `BotContext`.
+- Integrated Supabase `Admin` service-role DB connectivity mapping `/start` hooks directly to insert telemetry states inside the `buyers` table dynamically protecting collision cases by ignoring `PGRST116` errors on misses.
+- Designed comprehensive native UI browse cascades spanning `[Category Menu] -> [Paginated Photo Cards] -> ['Buy' Call-to-action]`.
+- Implemented robust "My Orders" pipeline querying historical telemetry natively joining against `products(name)` strings.
+- Refined typescript message narrowing context (`'text' in ctx.callbackQuery.message`) satisfying strict compiler standards across all callback bindings safely avoiding nested runtime assertions.
+
+**Next session starts at:**
+[ ] Megasession 6 — Buy Flow / Telegram Stripe Checkout 
+
+**Environment state:**
+- Supabase: Active.
+- Next.js Web: Active.
+- Telegram bot: Local Polling verified working natively via ES Node TSX module resolution.

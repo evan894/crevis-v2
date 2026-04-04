@@ -314,39 +314,39 @@ Fix them one by one. Prioritize mobile experience."
 **Goal:** Bot is live, responds to /start, browse flow works end-to-end.
 
 #### Session 5.1 — Bot Scaffold (2 hours)
-- [ ] Create /bot/index.ts — Telegraf bot init with token from env
-- [ ] Set up webhook mode for production, polling for development
-- [ ] Register /start command handler
-- [ ] /start response: welcome message + main menu inline keyboard
+- [x] Create /bot/index.ts — Telegraf bot init with token from env
+- [x] Set up webhook mode for production, polling for development
+- [x] Register /start command handler
+- [x] /start response: welcome message + main menu inline keyboard
       (🛍 Browse Products / 🔍 Search / 📦 My Orders)
-- [ ] Create or fetch buyer record in buyers table on /start
-- [ ] Session middleware for conversation state
-- [ ] Error handler: log errors, send user-friendly message
-- [ ] Test bot responds to /start locally with polling
+- [x] Create or fetch buyer record in buyers table on /start
+- [x] Session middleware for conversation state
+- [x] Error handler: log errors, send user-friendly message
+- [x] Test bot responds to /start locally with polling
 
 #### Session 5.2 — Browse + Product Card Flow (4 hours)
-- [ ] Category selection: inline keyboard with all categories
-- [ ] On category select: fetch active products in category from Supabase
+- [x] Category selection: inline keyboard with all categories
+- [x] On category select: fetch active products in category from Supabase
       — boosted products first, then by created_at desc
-- [ ] Product card format: send photo with caption
+- [x] Product card format: send photo with caption
       Name: {name}
       Price: ₹{price}
       Shop: {shop_name}
       {BOOSTED badge if boosted}
-- [ ] Inline buttons per product: "Buy Now ₹{price}" + "⬅ Back"
-- [ ] Pagination: "Load More" button if > 5 products in category
-- [ ] Back button returns to category selection
-- [ ] No products in category: "No products here yet. Try another category."
-- [ ] My Orders: fetch orders by buyer telegram_id, show list with
+- [x] Inline buttons per product: "Buy Now ₹{price}" + "⬅ Back"
+- [x] Pagination: "Load More" button if > 5 products in category
+- [x] Back button returns to category selection
+- [x] No products in category: "No products here yet. Try another category."
+- [x] My Orders: fetch orders by buyer telegram_id, show list with
       product name, amount, status, date
 
 #### ✅ Megasession 5 Done Checklist
-- [ ] /start shows main menu on Telegram
-- [ ] Browse flow: main menu → category → product cards → back
-- [ ] Boosted products appear before non-boosted
-- [ ] Product photo, name, price, shop name all display correctly
-- [ ] My Orders shows correct history for the buyer
-- [ ] Bot handles unexpected input gracefully (no crashes)
+- [x] /start shows main menu on Telegram
+- [x] Browse flow: main menu → category → product cards → back
+- [x] Boosted products appear before non-boosted
+- [x] Product photo, name, price, shop name all display correctly
+- [x] My Orders shows correct history for the buyer
+- [x] Bot handles unexpected input gracefully (no crashes)
 
 ---
 
