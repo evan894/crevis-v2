@@ -25,7 +25,7 @@ export default function Home() {
 
         <div className="pt-24 opacity-80 hover:opacity-100 transition-opacity duration-base">
             <p className="font-jetbrains-mono text-ink-muted text-sm tracking-wide">
-              CREDIT_BALANCE <span className="mx-2 text-border-strong">///</span> <span className="text-credit font-bold">100.00</span>
+              CREDIT_BALANCE <span className="mx-2 text-border-strong">{"///"}</span> <span className="text-credit font-bold">100.00</span>
             </p>
         </div>
       </div>

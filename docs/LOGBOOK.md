@@ -64,7 +64,7 @@ Copy this block at the end of every session and fill it in:
 ```
 Started:          [DATE]
 Target deadline:  [DATE]
-Repo:             github.com/Ishaan-BYTE/crevis-v2
+Repo:             github.com/evan894/crevis-v2
 Local URL:        http://localhost:3000
 Production URL:   [TBD]
 Supabase project: [PROJECT ID]
@@ -127,7 +127,7 @@ These must never be revisited without a strong reason.
 - [ ] Slack client ID + secret + signing secret added to .env.local
 - [ ] Razorpay test key ID + secret added to .env.local
 - [ ] Gemini API key added to .env.local
-- [ ] GitHub repo created: Ishaan-BYTE/crevis-v2
+- [x] GitHub repo created: evan894/crevis-v2
 - [ ] Vercel project created and linked to repo
 
 ---

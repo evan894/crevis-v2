@@ -14,9 +14,9 @@ export async function deductCredits(
     p_seller_id: sellerId,
     p_amount: amount,
     p_action: action,
-    p_note: note || null,
-    p_order_value: orderValue || null,
-    p_order_id: orderId || null,
+    p_note: note,
+    p_order_value: orderValue,
+    p_order_id: orderId,
   });
   if (error) throw error;
   return data;
@@ -32,7 +32,7 @@ export async function addCredits(
     p_seller_id: sellerId,
     p_amount: amount,
     p_action: action,
-    p_note: note || null,
+    p_note: note,
   });
   if (error) throw error;
   return data;

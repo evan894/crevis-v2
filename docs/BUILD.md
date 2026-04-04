@@ -123,17 +123,18 @@ Fix them one by one. Prioritize mobile experience."
 - [x] Write /lib/slack.ts — Slack WebClient init
 - [x] Write /lib/credits.ts — all credit deduction/addition logic
       using Supabase RPC functions
-- [ ] Test Supabase connection with a simple select query
-- [ ] Commit to GitHub: Ishaan-BYTE/crevis-v2
+      using Supabase RPC functions
+- [x] Test Supabase connection with a simple select query
+- [x] Commit to GitHub: evan894/crevis-v2
 
 #### ✅ Megasession 1 Done Checklist
-- [ ] `npm run dev` runs without errors
-- [ ] All 7 tables visible in Supabase dashboard
-- [ ] CREVIS100 coupon seeded and queryable
-- [ ] deduct_credits RPC tested manually in Supabase SQL editor
-- [ ] All /lib files exist and export correctly
-- [ ] Tailwind design tokens accessible in a test component
-- [ ] Google Fonts (Syne, DM Sans, JetBrains Mono) rendering in browser
+- [x] `npm run dev` runs without errors
+- [x] All 7 tables visible in Supabase dashboard
+- [x] CREVIS100 coupon seeded and queryable
+- [x] deduct_credits RPC tested manually in Supabase SQL editor
+- [x] All /lib files exist and export correctly
+- [x] Tailwind design tokens accessible in a test component
+- [x] Google Fonts (Syne, DM Sans, JetBrains Mono) rendering in browser
 
 ---
 
