@@ -96,8 +96,9 @@ export async function POST(request: Request) {
         paymentLink: paymentLink
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Create payment link error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Internal Server Error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

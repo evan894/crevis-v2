@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database.types';
 import { deductCredits, deactivateSellerListings } from '@/lib/credits';
-import { slackAdmin, sendSlackDM } from '@/lib/slack';
+import { sendSlackDM } from '@/lib/slack';
 import { Telegraf } from 'telegraf';
 
 const supabase = createClient<Database>(
@@ -37,9 +37,7 @@ export async function POST(req: Request) {
        const notes = payload.notes || {};
        const productId = notes.product_id;
        const buyerTelegramId = notes.buyer_telegram_id;
-       const sellerId = notes.seller_id;
        const paymentId = payload.id;
-       const refId = payload.reference_id || payload.description;
 
        // Find pending order
        let orderQuery = supabase.from('orders').select('*, products(name), sellers(shop_name, slack_user_id, slack_access_token)').eq('status', 'pending');
@@ -141,8 +139,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ received: true });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Webhook error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const message = err instanceof Error ? err.message : "Internal Server Error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

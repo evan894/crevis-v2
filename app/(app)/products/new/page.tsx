@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase";
-import { Loader2, ArrowLeft, UploadCloud, Image as ImageIcon, CheckCircle2, Wallet, RefreshCcw } from "lucide-react";
+import { Loader2, ArrowLeft, UploadCloud, Image as ImageIcon, Wallet, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "react-hot-toast";

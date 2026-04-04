@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@/lib/supabase";
-import { Loader2, ArrowLeft, Wallet as WalletIcon, CheckCircle2, TrendingUp, TrendingDown, Clock } from "lucide-react";
+import { Loader2, ArrowLeft, Wallet as WalletIcon, TrendingUp, TrendingDown, Clock } from "lucide-react";
 import Link from "next/link";
 import Script from "next/script";
 import confetti from "canvas-confetti";
