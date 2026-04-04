@@ -255,3 +255,42 @@ These must never be revisited without a strong reason.
 - Vercel: not deployed
 - Last known working URL: http://localhost:3000
 ---
+
+### Megasession 2 & Session 3.1 — April 4, 2026
+
+**Status:** ✅ Completed
+
+**What was built:**
+- Completed Phase 1 build stabilization (migrated from @supabase/auth-helpers-nextjs to @supabase/ssr, fixed ESLint).
+- Built `/app/auth/page.tsx` split layout with Supabase signup/signin.
+- Built `/app/onboarding/page.tsx` 3-step wizard (Shop Details -> Slack Connect -> Coupon Redeem).
+- Implemented Slack OAuth routing (`/api/auth/slack`).
+- Integrated `/api/credits/redeem-coupon` calling `redeem_coupon` RPC with `canvas-confetti` celebration.
+- Built explicit route guards natively in `middleware.ts` leveraging `createServerClient`.
+- Started Phase 3: Built `/app/products/page.tsx` inventory listing grid with active/inactive tags, and an interactive boost endpoint (`/api/products/[id]/boost`).
+
+**What was skipped / deferred:**
+- Skipped standalone components for simple empty states; integrated inline for velocity.
+
+**Bugs encountered:**
+- Next.js build failed strictly due to ESLint/TypeScript strict mode configs in Supabase SSR callbacks.
+
+**Bugs fixed:**
+- Added `CookieOptions` types to `@supabase/ssr` methods, replaced unused vars instead of ignoring them natively.
+
+**Decisions made:**
+- Opted for `middleware.ts` for native lightweight route guarding before React rendering components, ensuring edge speed.
+
+**Open questions / blockers:**
+- None. Fully ready for `/products/new` (Session 3.2).
+
+**Next session starts at:**
+[ ] Session 3.2 — New Product Form
+
+**Environment state:**
+- Supabase: Session logic active, onboarding flow operational
+- Telegram bot: keys present
+- Razorpay: keys present
+- Slack: keys present
+- Vercel: not deployed
+- Last known working URL: http://localhost:3000
