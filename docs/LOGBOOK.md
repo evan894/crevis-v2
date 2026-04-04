@@ -428,3 +428,86 @@ These must never be revisited without a strong reason.
 - Supabase: Active.
 - Next.js Web: Active.
 - Slack OAuth / Tokens: Actively supported across all components.
+---
+
+### Megasession 8 (Session 8.2) — April 4, 2026
+
+**Status:** ✅ Completed
+
+**What was built:**
+- Fixed Vercel deployment block by correcting git config variables (`evan894` and `evan@fixinbound.com`) and triggering manual redeployment via an empty commit.
+- Configured Vercel environment variable `NEXT_PUBLIC_APP_URL` appropriately leveraging CLI native bindings to point to `crevis-v2.vercel.app`.
+- Repathed Telegram Webhook mapping explicitly onto `app/api/telegram/webhook/route.ts` bridging accurately against prompt requirements and pushed directly to Vercel production.
+- Registered production Telegram Bot webhook cleanly pointing towards `https://crevis-v2.vercel.app`.
+- Engineered dummy production seed constructs initializing a test seller alongside exactly 5 dummy catalog items mapped strictly against the `SCHEMA.md` constraints natively.
+- Fixed a boundary edge-case bug inside the Razorpay payload generation where expiry offset needed native padding up to 20 minutes guarding accurately against edge-server clock drift logic.
+- Conducted full bot simulation parsing mock incoming webhook requests verifying native endpoints responding `ok: true` without systemic errors.
+
+**Bugs encountered:**
+- Razorpay `expire_by: timestamp` threw `BAD_REQUEST_ERROR` at runtime since exactly 15 minutes logic was frequently drifted behind platform validations minimally.
+- Vercel CLI interactions lacked interactive input fallback locally blocking direct `vercel env add` mappings.
+
+**Bugs fixed:**
+- Modified Razorpay timestamp padding dynamically to `20 * 60` offsetting reliably outside the 15-minute threshold.
+- Re-added the env variable structurally.
+
+**Next session starts at:**
+[ ] Session 8.3 — Open. Demo is fully prepared.
+
+**Environment state:**
+- Supabase: Production backend live, dummy seeded successfully.
+- Next.js Web: Vercel mapping flawlessly onto `crevis-v2.vercel.app` resolving correctly over HTTPS.
+- Telegram bot: Bound securely via Vercel Edge endpoints to Webhooks natively.
+- Payment Gateways: Razorpay bindings confirmed globally active.
+
+---
+### Session F1 — April 4, 2026
+
+**Status:** ✅ Completed
+
+**What was built:**
+- Refactored `api/credits/verify` completely out, replaced with `api/webhooks/razorpay-credits`. Now the backend directly reads Razorpay HMAC verification and verifies pending credit purchases.
+- Re-architected `/api/credits/purchase` to automatically insert `pending` credit_purchases on initialization.
+- Secured product creation in `api/products/create` to execute the database insert first before deducting credits, ensuring consistent ledger state.
+- Integrated `deactivateSellerListings` trigger directly upon listing product if credits hit absolute 0.
+- Re-architected boost endpoint (`api/products/[id]/boost`) mapping Slack notification payloads indicating Low Credits (< 20) and Zero Credits explicitly along with listing pausing.
+- Modded `api/webhooks/razorpay-orders/route.ts` forcing HTTP 200 Returns uniformly even upon pipeline breakage avoiding payment gateway retries.
+- Modded `lib/slack.ts` to natively consume caught errors instead of re-throwing them crashing the upstream API logic.
+- Patched sign-in constraints inside `app/auth/page.tsx` looking up exact `sellers` mapping before navigating users, avoiding 404 dead ends dynamically.
+
+**Next session starts at:**
+[ ] Session F2 — CRITICAL ROUTING + BOT FIXES
+
+---
+### Session F2 — April 4, 2026
+
+**Status:** ✅ Completed
+
+**What was built:**
+- Fixed Slack OAuth to pass `sellerId` securely via state and redirect directly back to onboarding with `connected=true` flag.
+- Created `app/(app)/orders/page.tsx` pulling active sales via Supabase relationships mapped safely through `buyer_name`.
+- Created `app/(app)/settings/page.tsx` for updating shop info natively alongside re-validating Slack connection.
+- Replaced the splash screen in `app/page.tsx` replacing completely with SSR boundary redirecting straight to dashboard/auth mappings securely.
+- Hardened all `bot.action()` commands wrapping them tightly in `try/catch` and prepending `await ctx.answerCbQuery()` actively resolving load spinner UI glitches globally natively inside `bot/index.ts`.
+- Removed `date-fns` usage in favor of zero-dependency `Intl.DateTimeFormat`.
+- Corrected imports for Next SSR client logic throughout.
+
+**Next session starts at:**
+[ ] Session F3 — DESIGN FIXES
+
+---
+### Session F3 — April 4, 2026
+
+**Status:** ✅ Completed
+
+**What was built:**
+- Fixed duplicate navigation bars by stripping `<nav>` elements from `(app)/products`, `(app)/products/new`, and `(app)/wallet` since they are handled natively by `(app)/layout.tsx`.
+- Refined `/products` aesthetics enforcing `aspect-[4/3]` bounds for thumbnails and applying native `--color-saffron` and `font-syne` combinations for product pricing elements securely.
+- Upgraded wallet UI balancing hero token size to `text-[34px]` natively mapping against `text-2xl` specs and wrapped "Buy Credits" and "Redeem Coupon" card segments into a single side-by-side `flex-row` rendering uniformly horizontally.
+- Tweaked Dashboard Connect Slack branding to `bg-[var(--color-saffron)]`.
+- Hardened server/client authentication on `/auth` asserting an 8 character minimum client-side bound.
+- Updated `lib/gemini.ts` model definition switching cleanly from `gemini-2.5-flash` to `gemini-2.0-flash`.
+- Eliminated lingering TypeScript explicit `any` and unreferenced `lucide-react` import lint errors globally achieving zero-error `tsc --noEmit` and `next lint` completion.
+
+**Next session starts at:**
+[ ] Open / Next session as directed by user.

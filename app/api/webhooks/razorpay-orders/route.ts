@@ -5,6 +5,7 @@ import { Database } from '@/types/database.types';
 import { deductCredits, deactivateSellerListings } from '@/lib/credits';
 import { sendSlackDM } from '@/lib/slack';
 import { Telegraf } from 'telegraf';
+import { PLATFORM_FEE_PERCENT, LOW_CREDIT_THRESHOLD, SLACK_MESSAGES } from '@/lib/constants';
 
 const supabase = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
        }
 
        const order = orders[0];
-       const fee = Math.ceil(order.amount * 0.05);
+       const fee = Math.ceil(order.amount * PLATFORM_FEE_PERCENT);
 
        // 1. Update order status
        await supabase.from('orders').update({
@@ -105,7 +106,7 @@ export async function POST(req: Request) {
                await sendSlackDM(
                    slackAccessToken,
                    slackUserId,
-                   `🛍 New order — ${productName} ₹${order.amount} from ${order.buyer_name}.\n${fee} credits deducted.`
+                   SLACK_MESSAGES.newOrder(productName as string, order.amount, order.buyer_name, fee)
                );
            } catch (slackErr) {
                console.error(`Slack notification failed [New Order] [seller_id: ${order.seller_id}]:`, slackErr);
@@ -117,17 +118,17 @@ export async function POST(req: Request) {
                        await sendSlackDM(
                            slackAccessToken,
                            slackUserId,
-                           `❌ Your listings have been paused due to zero credits.\nRecharge at crevis.in/wallet`
+                           SLACK_MESSAGES.deactivated()
                        );
                    } catch (slackErr) {
                        console.error(`Slack notification failed [Zero Credits] [seller_id: ${order.seller_id}]:`, slackErr);
                    }
-               } else if (newBalance < 20) {
+               } else if (newBalance < LOW_CREDIT_THRESHOLD) {
                    try {
                        await sendSlackDM(
                            slackAccessToken,
                            slackUserId,
-                           `⚠️ Your Crevis wallet is running low (${newBalance} credits).\nRecharge to keep listings active: crevis.in/wallet`
+                           SLACK_MESSAGES.lowCredits(newBalance)
                        );
                    } catch (slackErr) {
                        console.error(`Slack notification failed [Low Credits] [seller_id: ${order.seller_id}]:`, slackErr);
@@ -142,6 +143,6 @@ export async function POST(req: Request) {
   } catch (err: unknown) {
     console.error("Webhook error:", err);
     const message = err instanceof Error ? err.message : "Internal Server Error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 200 });
   }
 }

@@ -32,6 +32,9 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    const { data: seller } = await supabase.from("sellers").select("id").eq("user_id", user.id).single();
+    if (!seller) return NextResponse.json({ error: "Seller not found" }, { status: 404 });
+
     const razorpay = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID!,
       key_secret: process.env.RAZORPAY_KEY_SECRET!
@@ -47,6 +50,19 @@ export async function POST(request: Request) {
     };
 
     const order = await razorpay.orders.create(options);
+
+    const { error: insertError } = await supabase.from('credit_purchases').insert({
+      seller_id: seller.id,
+      amount_paid: amount,
+      credits_added: PACKAGES[amount],
+      razorpay_order_id: order.id,
+      status: 'pending'
+    });
+
+    if (insertError) {
+      console.error("Failed to insert pending credit purchase", insertError);
+      return NextResponse.json({ error: "Failed to initialize payment" }, { status: 500 });
+    }
 
     return NextResponse.json({ 
       id: order.id, 

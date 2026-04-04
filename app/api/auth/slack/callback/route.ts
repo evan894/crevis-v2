@@ -60,8 +60,8 @@ export async function GET(request: Request) {
        return NextResponse.json({ error: "Failed to link Slack account" }, { status: 500 });
     }
 
-    // Redirect to dashboard with success query param or directly back
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?slack_success=1`);
+    // Redirect to onboarding with connected flag
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/onboarding?step=2&connected=true`);
 
   } catch (error) {
     console.error("Exchange error:", error);

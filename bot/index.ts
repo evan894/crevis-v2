@@ -32,7 +32,7 @@ const bot = new Telegraf<BotContext>(process.env.TELEGRAM_BOT_TOKEN);
 
 bot.use(session());
 
-const CATEGORIES = ["Clothing", "Footwear", "Accessories", "Home Textiles", "Other"];
+import { CATEGORIES } from '../lib/constants';
 
 // Global Error Handler
 bot.catch((err, ctx) => {
@@ -75,8 +75,8 @@ bot.start(async (ctx) => {
       });
     }
 
-    if (ctx.session) ctx.session = {}; 
-    else (ctx.session as any) = {};
+    if (ctx.session) ctx.session = { category: undefined, offset: undefined, searchState: undefined }; 
+    else (ctx.session as SessionData) = { category: undefined, offset: undefined, searchState: undefined };
 
     await sendMainMenu(ctx, false);
   } catch (error) {
@@ -86,97 +86,133 @@ bot.start(async (ctx) => {
 });
 
 bot.action('main_menu', async (ctx) => {
-  const isMessageText = ctx.callbackQuery?.message && 'text' in ctx.callbackQuery.message;
-  await sendMainMenu(ctx, isMessageText);
+  try {
+    await ctx.answerCbQuery();
+    const isMessageText = ctx.callbackQuery?.message && 'text' in ctx.callbackQuery.message;
+    await sendMainMenu(ctx, isMessageText);
+  } catch (err) {
+    console.error('[handler main_menu]', err);
+    await ctx.reply('Something went wrong. Please try /start again.');
+  }
 });
 
 bot.action('browse', async (ctx) => {
-  if (ctx.session) {
-     ctx.session.offset = 0;
-     ctx.session.category = undefined;
-  }
-  
-  await ctx.editMessageText('Select a category to browse:', {
-    reply_markup: {
-      inline_keyboard: [
-        ...CATEGORIES.map(c => [{ text: c, callback_data: `category:${c}` }]),
-        [{ text: '⬅ Main Menu', callback_data: 'main_menu' }]
-      ]
+  try {
+    await ctx.answerCbQuery();
+    if (ctx.session) {
+       ctx.session.offset = 0;
+       ctx.session.category = undefined;
     }
-  }).catch(() => {});
+    
+    await ctx.editMessageText('Select a category to browse:', {
+      reply_markup: {
+        inline_keyboard: [
+          ...CATEGORIES.map(c => [{ text: c, callback_data: `category:${c}` }]),
+          [{ text: '⬅ Main Menu', callback_data: 'main_menu' }]
+        ]
+      }
+    }).catch(() => {});
+  } catch (err) {
+    console.error('[handler browse]', err);
+    await ctx.reply('Something went wrong. Please try /start again.');
+  }
 });
 
 bot.action(/category:(.+)/, async (ctx) => {
-  const category = ctx.match[1];
-  if (!ctx.session) (ctx.session as any) = {};
-  ctx.session.category = category;
-  ctx.session.offset = 0;
-  
-  await sendProducts(ctx, category, 0);
+  try {
+    await ctx.answerCbQuery();
+    const category = ctx.match[1];
+    if (!ctx.session) (ctx.session as SessionData) = { category: undefined, offset: undefined, searchState: undefined };
+    ctx.session.category = category;
+    ctx.session.offset = 0;
+    
+    await sendProducts(ctx, category, 0);
+  } catch (err) {
+    console.error('[handler category:*]', err);
+    await ctx.reply('Something went wrong. Please try /start again.');
+  }
 });
 
 bot.action('load_more', async (ctx) => {
-  const category = ctx.session?.category;
-  if (!category) {
-    await ctx.answerCbQuery("Session expired. Please restart.", { show_alert: true });
-    return sendMainMenu(ctx, false);
+  try {
+    await ctx.answerCbQuery();
+    const category = ctx.session?.category;
+    if (!category) {
+      await ctx.answerCbQuery("Session expired. Please restart.", { show_alert: true });
+      return sendMainMenu(ctx, false);
+    }
+    
+    const currentOffset = ctx.session?.offset || 0;
+    ctx.session!.offset = currentOffset + 5;
+    
+    // Clean up the previous 'Load more' message
+    await ctx.deleteMessage().catch(()=>{});
+    await sendProducts(ctx, category, ctx.session!.offset);
+  } catch (err) {
+    console.error('[handler load_more]', err);
+    await ctx.reply('Something went wrong. Please try /start again.');
   }
-  
-  const currentOffset = ctx.session?.offset || 0;
-  ctx.session!.offset = currentOffset + 5;
-  
-  // Clean up the previous 'Load more' message
-  await ctx.deleteMessage().catch(()=>{});
-  await sendProducts(ctx, category, ctx.session!.offset);
 });
 
 bot.action('orders', async (ctx) => {
-  const user = ctx.from;
-  if (!user) return;
+  try {
+    await ctx.answerCbQuery();
+    const user = ctx.from;
+    if (!user) return;
 
-  const { data: myOrders } = await supabase
-      .from('orders')
-      .select('amount, status, created_at, products(name)')
-      .eq('buyer_telegram_id', user.id.toString())
-      .order('created_at', { ascending: false })
-      .limit(10);
+    const { data: myOrders } = await supabase
+        .from('orders')
+        .select('amount, status, created_at, products(name)')
+        .eq('buyer_telegram_id', user.id.toString())
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-  if (!myOrders || myOrders.length === 0) {
-     await ctx.editMessageText("You have no orders yet.", {
-         reply_markup: {
-            inline_keyboard: [[{ text: '⬅ Main Menu', callback_data: 'main_menu' }]]
-         }
-     }).catch(() => {});
-     return;
+    if (!myOrders || myOrders.length === 0) {
+       await ctx.editMessageText("You have no orders yet.", {
+           reply_markup: {
+              inline_keyboard: [[{ text: '⬅ Main Menu', callback_data: 'main_menu' }]]
+           }
+       }).catch(() => {});
+       return;
+    }
+
+    let text = "📦 *Your Recent Orders*\n\n";
+    for (const o of myOrders) {
+       const pData = Array.isArray(o.products) ? o.products[0] : o.products;
+       const pName = pData?.name || "Unknown Item";
+       const date = new Date(o.created_at).toLocaleDateString();
+       text += `• ${pName} - ₹${o.amount} [${o.status.toUpperCase()}] on ${date}\n`;
+    }
+
+    await ctx.editMessageText(text, {
+       parse_mode: 'Markdown',
+       reply_markup: {
+          inline_keyboard: [
+             [{ text: '⬅ Main Menu', callback_data: 'main_menu' }]
+          ]
+       }
+    }).catch(() => {});
+  } catch (err) {
+    console.error('[handler orders]', err);
+    await ctx.reply('Something went wrong. Please try /start again.');
   }
-
-  let text = "📦 *Your Recent Orders*\n\n";
-  for (const o of myOrders) {
-     const pData = Array.isArray(o.products) ? o.products[0] : o.products;
-     const pName = pData?.name || "Unknown Item";
-     const date = new Date(o.created_at).toLocaleDateString();
-     text += `• ${pName} - ₹${o.amount} [${o.status.toUpperCase()}] on ${date}\n`;
-  }
-
-  await ctx.editMessageText(text, {
-     parse_mode: 'Markdown',
-     reply_markup: {
-        inline_keyboard: [
-           [{ text: '⬅ Main Menu', callback_data: 'main_menu' }]
-        ]
-     }
-  }).catch(() => {});
 });
 
 bot.action('search', async (ctx) => {
-  ctx.session.category = undefined;
-  ctx.session.searchState = "AWAITING_QUERY";
-  
-  await ctx.editMessageText("What are you looking for?", {
-    reply_markup: {
-      inline_keyboard: [[{ text: '⬅ Cancel', callback_data: 'main_menu' }]]
-    }
-  }).catch(() => {});
+  try {
+    await ctx.answerCbQuery();
+    ctx.session.category = undefined;
+    ctx.session.searchState = "AWAITING_QUERY";
+    
+    await ctx.editMessageText("What are you looking for?", {
+      reply_markup: {
+        inline_keyboard: [[{ text: '⬅ Cancel', callback_data: 'main_menu' }]]
+      }
+    }).catch(() => {});
+  } catch (err) {
+    console.error('[handler search]', err);
+    await ctx.reply('Something went wrong. Please try /start again.');
+  }
 });
 
 // Text handler for search state
@@ -280,42 +316,48 @@ bot.on('text', async (ctx) => {
    }
 });
 bot.action(/buy:(.+)/, async (ctx) => {
-   const productId = ctx.match[1];
-   const user = ctx.from;
-   if (!user) return;
-
-   const sentMsg = await ctx.reply("Creating secure payment link... ⏳");
-
    try {
-       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-       const res = await fetch(`${appUrl}/api/payment/create-link`, {
-           method: "POST",
-           headers: { "Content-Type": "application/json" },
-           body: JSON.stringify({
-               productId,
-               buyerTelegramId: user.id.toString()
-           })
-       });
+       await ctx.answerCbQuery();
+       const productId = ctx.match[1];
+       const user = ctx.from;
+       if (!user) return;
 
-       const data = await res.json();
-       if (!res.ok) {
-           throw new Error(data.error || "Failed to create payment link");
-       }
+       const sentMsg = await ctx.reply("Creating secure payment link... ⏳");
 
-       await ctx.telegram.editMessageText(ctx.chat?.id as number, sentMsg.message_id, undefined, "Tap below to pay securely 👇", {
-           reply_markup: {
-               inline_keyboard: [[{ text: '💳 Pay Now', url: data.short_url }]]
+       try {
+           const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+           const res = await fetch(`${appUrl}/api/payment/create-link`, {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify({
+                   productId,
+                   buyerTelegramId: user.id.toString()
+               })
+           });
+
+           const data = await res.json();
+           if (!res.ok) {
+               throw new Error(data.error || "Failed to create payment link");
            }
-       });
 
-   } catch (error) {
-       console.error("Buy flow error:", error);
-       await ctx.telegram.editMessageText(
-          ctx.chat?.id, 
-          sentMsg.message_id, 
-          undefined, 
-          "❌ Payment link creation failed. Please try again later."
-       );
+           await ctx.telegram.editMessageText(ctx.chat?.id as number, sentMsg.message_id, undefined, "Tap below to pay securely 👇", {
+               reply_markup: {
+                   inline_keyboard: [[{ text: '💳 Pay Now', url: data.short_url }]]
+               }
+           });
+
+       } catch (error) {
+           console.error("Buy flow error:", error);
+           await ctx.telegram.editMessageText(
+              ctx.chat?.id, 
+              sentMsg.message_id, 
+              undefined, 
+              "❌ Payment link creation failed. Please try again later."
+           );
+       }
+   } catch (err) {
+       console.error('[handler buy:*]', err);
+       await ctx.reply('Something went wrong. Please try /start again.');
    }
 });
 

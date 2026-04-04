@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { createBrowserClient } from "@/lib/supabase";
-import { Loader2, Zap, MoreVertical, Plus, PackageOpen, LayoutDashboard, Wallet, Power, PowerOff, Trash2 } from "lucide-react";
+import { Loader2, Zap, MoreVertical, Plus, PackageOpen, Power, PowerOff, Trash2 } from "lucide-react";
+import { CREDIT_COST_BOOST } from "@/lib/constants";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "react-hot-toast";
@@ -59,8 +60,8 @@ export default function ProductsPage() {
   const handleToggleActive = async (id: string, currentActive: boolean) => {
     setActionLoading(id);
     try {
-      const { error } = await supabase.from('products').update({ active: !currentActive }).eq('id', id);
-      if (error) throw error;
+      const res = await fetch(`/api/products/${id}/toggle-active`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to toggle");
       setProducts(products.map(p => p.id === id ? { ...p, active: !currentActive } : p));
       toast.success(currentActive ? "Product deactivated" : "Product activated");
     } catch {
@@ -75,8 +76,8 @@ export default function ProductsPage() {
     if (!confirm("Are you sure you want to delete this product?")) return;
     setActionLoading(id);
     try {
-      const { error } = await supabase.from('products').delete().eq('id', id);
-      if (error) throw error;
+      const res = await fetch(`/api/products/${id}/delete`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
       setProducts(products.filter(p => p.id !== id));
       toast.success("Product deleted");
     } catch {
@@ -119,23 +120,7 @@ export default function ProductsPage() {
   return (
     <div className="min-h-screen bg-surface selection:bg-saffron selection:text-surface-raised font-dm-sans">
       
-      {/* Navbar Minimal */}
-      <nav className="h-16 border-b border-border bg-surface-raised px-6 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center gap-8">
-          <Link href="/dashboard" className="font-syne font-bold text-xl tracking-wide text-ink">CREVIS.</Link>
-          <div className="hidden md:flex gap-6">
-            <Link href="/dashboard" className="text-sm font-medium text-ink-secondary hover:text-ink transition-colors flex items-center gap-2">
-              <LayoutDashboard className="w-4 h-4" /> Dashboard
-            </Link>
-            <Link href="/products" className="text-sm font-medium text-saffron flex items-center gap-2">
-              <PackageOpen className="w-4 h-4" /> Products
-            </Link>
-            <Link href="/wallet" className="text-sm font-medium text-ink-secondary hover:text-ink transition-colors flex items-center gap-2">
-              <Wallet className="w-4 h-4" /> Wallet
-            </Link>
-          </div>
-        </div>
-      </nav>
+
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-12">
@@ -210,7 +195,7 @@ export default function ProductsPage() {
               <div key={product.id} className="bg-surface-raised border border-border rounded-xl overflow-hidden hover:shadow-md transition-all duration-base hover:-translate-y-1 group relative flex flex-col">
                 
                 {/* Image Section */}
-                <div className="aspect-square bg-surface relative overflow-hidden">
+                <div className="aspect-[4/3] bg-surface relative overflow-hidden">
                   <Image 
                     src={product.photo_url} 
                     alt={product.name}
@@ -262,7 +247,7 @@ export default function ProductsPage() {
                              className="w-full px-4 py-2 text-sm text-left flex items-center gap-2 hover:bg-surface text-ink transition-colors disabled:opacity-50"
                            >
                              {actionLoading === product.id ? <Loader2 className="w-4 h-4 animate-spin text-saffron" /> : <Zap className="w-4 h-4 text-saffron" />}
-                             Boost Listing (10 C)
+                             Boost Listing ({CREDIT_COST_BOOST} C)
                            </button>
                          )}
 
@@ -297,7 +282,7 @@ export default function ProductsPage() {
                   </p>
                   
                   <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                     <span className="font-jetbrains-mono font-bold text-lg text-ink">
+                     <span className="font-syne font-bold text-[var(--color-saffron)] text-[17px]">
                         ₹{product.price.toLocaleString('en-IN')}
                      </span>
                   </div>

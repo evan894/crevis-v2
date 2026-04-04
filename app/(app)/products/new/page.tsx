@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase";
-import { Loader2, ArrowLeft, UploadCloud, Image as ImageIcon, Wallet, RefreshCcw } from "lucide-react";
+import { Loader2, UploadCloud, Image as ImageIcon, Wallet, RefreshCcw } from "lucide-react";
 import Link from "next/link";
+import { CATEGORIES, CREDIT_COST_LISTING } from "@/lib/constants";
 import Image from "next/image";
 import { toast } from "react-hot-toast";
 
@@ -68,7 +69,7 @@ export default function NewProductPage() {
     if (!file) return toast.error("Product image is required");
     if (!name.trim()) return toast.error("Product name is required");
     if (!price || isNaN(Number(price)) || Number(price) <= 0) return toast.error("Valid price is required");
-    if (creditBalance < 2) return toast.error("Insufficient credits. Please recharge your wallet.");
+    if (creditBalance < CREDIT_COST_LISTING) return toast.error("Insufficient credits. Please recharge your wallet.");
 
     setLoading(true);
 
@@ -123,12 +124,7 @@ export default function NewProductPage() {
   return (
     <div className="min-h-screen bg-surface selection:bg-saffron selection:text-surface-raised font-dm-sans pb-20">
       
-      {/* Navbar Minimal */}
-      <nav className="h-16 border-b border-border bg-surface-raised px-6 flex items-center sticky top-0 z-50">
-        <Link href="/products" className="text-ink-secondary hover:text-ink transition-colors flex items-center gap-2 text-sm font-medium">
-          <ArrowLeft className="w-4 h-4" /> Back to Inventory
-        </Link>
-      </nav>
+
 
       {/* Main Content */}
       <main className="max-w-[560px] mx-auto px-6 py-10">
@@ -138,13 +134,13 @@ export default function NewProductPage() {
         </div>
 
         {/* Credit Cost Notice Section */}
-        <div className={`mb-8 p-4 rounded-lg flex items-start gap-3 border ${creditBalance < 5 && creditBalance >= 2 ? 'bg-warning-bg border-warning/30 text-warning-content' : creditBalance < 2 ? 'bg-error-bg border-error/30 text-error' : 'bg-surface-raised border-border text-ink-secondary'}`}>
-           <Wallet className={`w-5 h-5 shrink-0 ${creditBalance < 5 && creditBalance >= 2 ? 'text-warning' : creditBalance < 2 ? 'text-error' : 'text-saffron'}`} />
+         <div className={`mb-8 p-4 rounded-lg flex items-start gap-3 border ${creditBalance < 5 && creditBalance >= CREDIT_COST_LISTING ? 'bg-warning-bg border-warning/30 text-warning-content' : creditBalance < CREDIT_COST_LISTING ? 'bg-error-bg border-error/30 text-error' : 'bg-surface-raised border-border text-ink-secondary'}`}>
+           <Wallet className={`w-5 h-5 shrink-0 ${creditBalance < 5 && creditBalance >= CREDIT_COST_LISTING ? 'text-warning' : creditBalance < CREDIT_COST_LISTING ? 'text-error' : 'text-saffron'}`} />
            <div className="flex-1">
-             <p className="font-medium text-sm mb-1 text-ink">Publishing deducts 2 credits.</p>
+             <p className="font-medium text-sm mb-1 text-ink">Publishing deducts {CREDIT_COST_LISTING} credits.</p>
              <p className="text-sm">Your balance: <strong className="font-jetbrains-mono">{creditBalance}</strong> credits</p>
            </div>
-           {creditBalance < 2 && (
+           {creditBalance < CREDIT_COST_LISTING && (
              <Link href="/wallet" className="shrink-0 h-[36px] px-4 inline-flex items-center justify-center bg-error text-surface-raised rounded-md font-medium text-sm shadow-sm opacity-90 hover:opacity-100 transition-opacity">
                <RefreshCcw className="w-4 h-4 mr-2" /> Recharge
              </Link>
@@ -232,11 +228,9 @@ export default function NewProductPage() {
                    disabled={loading}
                    className="w-full h-[44px] px-3 bg-surface border border-border rounded-md text-base text-ink focus:border-saffron focus:ring-1 focus:ring-saffron outline-none transition-all duration-fast appearance-none"
                  >
-                   <option value="Clothing">Clothing</option>
-                   <option value="Footwear">Footwear</option>
-                   <option value="Accessories">Accessories</option>
-                   <option value="Home Textiles">Home Textiles</option>
-                   <option value="Other">Other</option>
+                   {CATEGORIES.map(cat => (
+                     <option key={cat} value={cat}>{cat}</option>
+                   ))}
                  </select>
                </div>
              </div>
@@ -257,7 +251,7 @@ export default function NewProductPage() {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading || creditBalance < 2}
+            disabled={loading || creditBalance < CREDIT_COST_LISTING}
             className="w-full h-[54px] flex items-center justify-center bg-saffron text-surface-raised rounded-md font-medium hover:bg-saffron-dark hover:shadow-saffron active:scale-[0.98] transition-all duration-base disabled:opacity-70 disabled:cursor-not-allowed text-lg"
           >
             {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Publish Listing"}

@@ -11,6 +11,6 @@ export const sendSlackDM = async (slackAccessToken: string | null, slackUserId: 
         text
     });
   } catch (error) {
-    throw error;
+    console.error(`[Slack] failed — ${error instanceof Error ? error.message : "Unknown Error"}`);
   }
 };

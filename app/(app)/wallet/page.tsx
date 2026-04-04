@@ -16,11 +16,7 @@ type LedgerEntry = {
   created_at: string;
 };
 
-const PACKAGES = [
-  { price: 100, credits: 100 },
-  { price: 500, credits: 550 },
-  { price: 1000, credits: 1200 },
-];
+import { CREDIT_PACKAGES } from "@/lib/constants";
 
 export default function WalletPage() {
 
@@ -35,30 +31,8 @@ export default function WalletPage() {
   const [couponLoading, setCouponLoading] = useState(false);
 
   useEffect(() => {
-    const doFetch = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        
-        const { data: seller } = await supabase.from('sellers').select('id, credit_balance').eq('user_id', user.id).single();
-        if (!seller) return;
-
-        setBalance(seller.credit_balance);
-
-        const { data: ledgerData } = await supabase
-          .from('credit_ledger')
-          .select('*')
-          .eq('seller_id', seller.id)
-          .order('created_at', { ascending: false });
-
-        if (ledgerData) setLedger(ledgerData);
-      } catch (err) {
-        console.error("Fetch wallet failed", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    doFetch();
+    fetchWalletData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
   const fetchWalletData = async () => {
@@ -210,25 +184,26 @@ export default function WalletPage() {
               <div className="bg-credit-light border border-border-strong rounded-xl p-8 flex flex-col items-center text-center shadow-sm">
                  <WalletIcon className="w-8 h-8 text-credit mb-4" />
                  <h2 className="text-sm font-medium text-ink-secondary mb-1">Available Credits</h2>
-                 <p className="font-jetbrains-mono font-bold text-5xl text-credit tracking-tight mb-2">
+                 <p className="font-jetbrains-mono font-bold text-[34px] text-credit tracking-tight mb-2">
                     {balance ?? 0}
                  </p>
                  <p className="text-xs text-ink-muted">1 credit = 1 listing or priority action</p>
               </div>
 
+              <div className="flex flex-row gap-4 items-stretch w-full">
               {/* Purchase Packages */}
-              <div className="bg-surface-raised border border-border rounded-xl p-6">
+              <div className="flex-1 bg-surface-raised border border-border rounded-xl p-6">
                  <h3 className="font-syne font-bold text-lg text-ink mb-4">Top up wallet</h3>
                  <div className="flex flex-col gap-3">
-                    {PACKAGES.map((pkg) => (
+                    {CREDIT_PACKAGES.map((pkg) => (
                        <button
-                         key={pkg.price}
-                         onClick={() => handlePurchase(pkg.price)}
+                         key={pkg.amount}
+                         onClick={() => handlePurchase(pkg.amount)}
                          disabled={checkoutLoading !== null}
                          className="h-[54px] px-4 w-full bg-surface border border-border-strong rounded-lg flex items-center justify-between hover:border-saffron hover:shadow-sm transition-all duration-base group disabled:opacity-70 disabled:cursor-not-allowed"
                        >
-                         <span className="font-jetbrains-mono font-bold text-ink">₹{pkg.price}</span>
-                         {checkoutLoading === pkg.price ? (
+                         <span className="font-jetbrains-mono font-bold text-ink">₹{pkg.amount}</span>
+                         {checkoutLoading === pkg.amount ? (
                            <Loader2 className="w-5 h-5 text-saffron animate-spin" />
                          ) : (
                            <span className="font-medium text-saffron text-sm bg-saffron/10 px-3 py-1 rounded-md group-hover:bg-saffron group-hover:text-surface-raised transition-colors">
@@ -241,7 +216,7 @@ export default function WalletPage() {
               </div>
 
               {/* Redeem Coupon */}
-              <div className="bg-surface-raised border border-border rounded-xl p-6">
+              <div className="flex-1 bg-surface-raised border border-border rounded-xl p-6">
                  <h3 className="font-syne font-bold text-lg text-ink mb-2">Have a coupon?</h3>
                  <p className="text-xs text-ink-secondary mb-4">Redeem your code for free credits.</p>
                  
@@ -261,6 +236,7 @@ export default function WalletPage() {
                       {couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
                     </button>
                  </form>
+              </div>
               </div>
 
            </div>

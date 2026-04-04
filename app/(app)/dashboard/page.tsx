@@ -167,7 +167,7 @@ export default function DashboardPage() {
             {!loading && !slackConnected && sellerId && (
                <a 
                  href={`/api/auth/slack?sellerId=${sellerId}`}
-                 className="inline-flex items-center gap-2 bg-[#4A154B] hover:bg-[#3E113E] text-white px-4 py-2 rounded font-medium text-sm transition-colors border border-transparent"
+                 className="inline-flex items-center gap-2 bg-[var(--color-saffron)] hover:bg-[var(--color-saffron-dark)] text-white px-4 py-2 rounded font-medium text-sm transition-colors border border-transparent"
                >
                  <MessageSquare className="w-4 h-4" />
                  Connect Slack

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { deductCredits } from "@/lib/credits";
+import { deductCredits, deactivateSellerListings } from "@/lib/credits";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { Database } from "@/types/database.types";
+import { CREDIT_COST_LISTING } from "@/lib/constants";
 
 export async function POST(request: Request) {
   try {
@@ -31,14 +32,11 @@ export async function POST(request: Request) {
     const { data: seller } = await supabase.from("sellers").select("id, credit_balance").eq("user_id", user.id).single();
     if (!seller) return NextResponse.json({ error: "Seller profile not found" }, { status: 404 });
 
-    if (seller.credit_balance < 2) {
+    if (seller.credit_balance < CREDIT_COST_LISTING) {
        return NextResponse.json({ error: "Insufficient credits to list product" }, { status: 400 });
     }
 
-    // Deduct 2 credits
-    await deductCredits(seller.id, 2, "listing", `Listing fee for ${name}`);
-
-    // Insert Product
+    // Insert Product FIRST
     const { data: product, error: insertError } = await supabaseAdmin.from("products").insert({
        seller_id: seller.id,
        name,
@@ -51,6 +49,14 @@ export async function POST(request: Request) {
     }).select().single();
 
     if (insertError) throw insertError;
+
+    // THEN Deduct credits
+    const newBalance = await deductCredits(seller.id, CREDIT_COST_LISTING, "listing", `Listing fee for ${name}`);
+
+    // THEN Check new balance
+    if (newBalance === 0) {
+       await deactivateSellerListings(seller.id);
+    }
 
     return NextResponse.json({ success: true, product });
   } catch (error: unknown) {

@@ -24,6 +24,7 @@ export default function AuthPage() {
     try {
       if (isSignUp) {
         if (!name.trim()) throw new Error("Name is required");
+        if (password.length < 8) throw new Error("Password must be at least 8 characters");
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -34,12 +35,18 @@ export default function AuthPage() {
         if (signUpError) throw signUpError;
         router.push("/onboarding");
       } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (signInError) throw signInError;
-        router.push("/dashboard");
+        
+        const { data: seller } = await supabase.from('sellers').select('id').eq('user_id', signInData.user.id).single();
+        if (seller) {
+            router.push("/dashboard");
+        } else {
+            router.push("/onboarding");
+        }
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -149,7 +156,7 @@ export default function AuthPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 disabled={loading}
                 className="w-full h-[44px] px-3 bg-surface-raised border border-border rounded-md font-dm-sans text-base text-ink placeholder:text-ink-muted focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron transition-all duration-fast"
                 placeholder="••••••••"

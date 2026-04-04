@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase";
 import { Loader2, CheckCircle2, Ticket } from "lucide-react";
 import confetti from "canvas-confetti";
+import { CATEGORIES } from "@/lib/constants";
 import { toast } from "react-hot-toast";
 
 function OnboardingContent() {
@@ -14,6 +15,7 @@ function OnboardingContent() {
   const [step, setStep] = useState(initStep);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [sellerId, setSellerId] = useState<string | null>(null);
 
   const [shopName, setShopName] = useState("");
   const [category, setCategory] = useState("Clothing");
@@ -31,6 +33,9 @@ function OnboardingContent() {
         setUserId(data.user.id);
         supabase.from("sellers").select("id, slack_access_token").eq("user_id", data.user.id).single()
           .then((res) => {
+             if (res.data) {
+                setSellerId(res.data.id);
+             }
              if (res.data && !redeemSuccess) {
                 // If they are fully onboarded and somehow landed here without trying to redeem, maybe push to dashboard
                 // but let's just respect the steps for now unless we add an explicit dashboard jump.
@@ -54,12 +59,13 @@ function OnboardingContent() {
     
     setLoading(true);
     try {
-      const { error: dbError } = await supabase.from("sellers").insert({
+      const { data: newSeller, error: dbError } = await supabase.from("sellers").insert({
         user_id: userId,
         shop_name: shopName,
         category: category,
-      });
+      }).select("id").single();
       if (dbError) throw dbError;
+      setSellerId(newSeller.id);
       setStep(2);
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -105,7 +111,7 @@ function OnboardingContent() {
     }
   };
 
-  const isSlackSuccess = searchParams.get("slack_success") === "true";
+  const isSlackSuccess = searchParams.get("connected") === "true";
 
   return (
     <div className="min-h-screen bg-surface flex flex-col items-center py-12 px-6 selection:bg-saffron selection:text-surface-raised">
@@ -153,11 +159,9 @@ function OnboardingContent() {
                   disabled={loading}
                   className="w-full h-[44px] px-3 bg-surface-raised border border-border rounded-md font-dm-sans text-base text-ink focus:border-saffron focus:ring-1 focus:ring-saffron outline-none transition-all duration-fast appearance-none"
                 >
-                  <option value="Clothing">Clothing</option>
-                  <option value="Footwear">Footwear</option>
-                  <option value="Accessories">Accessories</option>
-                  <option value="Home Textiles">Home Textiles</option>
-                  <option value="Other">Other</option>
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
                 </select>
               </div>
 
@@ -187,7 +191,7 @@ function OnboardingContent() {
             ) : (
               <div className="mb-8 space-y-3">
                 <a 
-                  href="/api/auth/slack"
+                  href={`/api/auth/slack?sellerId=${sellerId || ""}`}
                   className="w-full h-[48px] flex items-center justify-center bg-surface-raised border border-border-strong text-ink rounded-md font-dm-sans font-medium hover:border-ink transition-all duration-base shadow-sm"
                 >
                   <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" fill="currentColor">
