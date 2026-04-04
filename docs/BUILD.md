@@ -269,38 +269,38 @@ Fix them one by one. Prioritize mobile experience."
 **Goal:** Seller has full visibility into their shop performance.
 
 #### Session 4.1 — Dashboard Layout + Stats (3 hours)
-- [ ] Build /app/dashboard/page.tsx
-- [ ] Sidebar navigation component (desktop) with Lucide icons:
+- [x] Build /app/dashboard/page.tsx
+- [x] Sidebar navigation component (desktop) with Lucide icons:
       Dashboard, Products, Wallet, Orders, Settings
-- [ ] Bottom navigation (mobile, 4 items max)
-- [ ] Active nav item: saffron-light bg, saffron-dark text,
+- [x] Bottom navigation (mobile, 4 items max)
+- [x] Active nav item: saffron-light bg, saffron-dark text,
       3px left border saffron (desktop)
-- [ ] Top greeting: "Good morning, {shop_name}" — Syne 600
-- [ ] 4 stat cards: Total Orders, Credit Balance, Active Listings,
+- [x] Top greeting: "Good morning, {shop_name}" — Syne 600
+- [x] 4 stat cards: Total Orders, Credit Balance, Active Listings,
       Total Earnings
-- [ ] Credit Balance card uses credit color scheme + shadow-credit
-- [ ] Stat cards: skeleton loader while fetching
+- [x] Credit Balance card uses credit color scheme + shadow-credit
+- [x] Stat cards: skeleton loader while fetching
 
 #### Session 4.2 — Orders Table + Live Updates (3 hours)
-- [ ] Recent orders table: product name, buyer name, amount,
+- [x] Recent orders table: product name, buyer name, amount,
       platform fee, status, time
-- [ ] Status badges: pending (warning), completed (success),
+- [x] Status badges: pending (warning), completed (success),
       failed (error) — color-coded per DESIGN.md
-- [ ] Supabase realtime subscription on orders table for current seller
-- [ ] On new order: table updates live + subtle pulse animation on
+- [x] Supabase realtime subscription on orders table for current seller
+- [x] On new order: table updates live + subtle pulse animation on
       order count stat card
-- [ ] Low credits warning banner: full-width warning-bg, shows if
+- [x] Low credits warning banner: full-width warning-bg, shows if
       balance < 20, links to /wallet, dismissible per session
-- [ ] Empty orders state: "No orders yet. Share your Telegram bot
+- [x] Empty orders state: "No orders yet. Share your Telegram bot
       link to start selling."
 
 #### ✅ Megasession 4 Done Checklist
-- [ ] Dashboard loads with correct stats for current seller
-- [ ] Sidebar navigation works on desktop, bottom nav on mobile
-- [ ] New order appears in table within 3 seconds via realtime
-- [ ] Low credits banner shows when balance < 20
-- [ ] All skeleton loaders present during data fetch
-- [ ] Mobile layout tested on 375px viewport
+- [x] Dashboard loads with correct stats for current seller
+- [x] Sidebar navigation works on desktop, bottom nav on mobile
+- [x] New order appears in table within 3 seconds via realtime
+- [x] Low credits banner shows when balance < 20
+- [x] All skeleton loaders present during data fetch
+- [x] Mobile layout tested on 375px viewport
 
 ---
 

@@ -326,3 +326,36 @@ These must never be revisited without a strong reason.
 - Supabase: Active (storage bins fully working)
 - Vercel: ready for testing
 - Razorpay: Integrated test keys successfully tested.
+
+---
+
+### Megasession 4 — April 4, 2026
+
+**Status:** ✅ Completed
+
+**What was built:**
+- Built `app/(app)/layout.tsx` unifying the entire dashboard navigation natively via a reactive `<aside>` Sidebar Desktop + a `<nav className="md:hidden">` Bottom bar Mobile layer, matching design tokens perfectly.
+- Built `app/(app)/dashboard/page.tsx` the primary Seller Hub summarizing shop activity.
+- Integrated comprehensive Supabase data fetching including calculating active listings count, running tally of live earnings, and querying exact shop info.
+- Live Orders Table built mapping joined Supabase relationships (`products(name)`) seamlessly.
+- Engineered live WebSocket connection via `supabase.channel` that subscribes to `postgres_changes` mapped exclusively to the seller's active UUID, driving instantaneous visual pulsing and row-injections the second a Telegram order checks out.
+- Implemented smart Low-Credit banner checking `creditBalance < 20`, utilizing `sessionStorage` for UX-friendly dismissible persistence.
+
+**Bugs encountered:**
+- Next.js TypeScript compilation barked at importing generic abstractions (`createBrowserClient<Database>()`) redundantly.
+- ESLint strictly halted the build over unused React hook declarations.
+
+**Bugs fixed:**
+- Scrubbed unused imports (`Loader2`, `Clock` unused icons).
+- Validated Typescript generic inference natively eliminating duplicate angle brackets context.
+
+**Decisions made:**
+- Opted to group the primary internal pages inside a Next.js `(app)` route group to elegantly hoist the central AppLayout wrapper over all authenticated segments (`/dashboard`, `/wallet`, `/products`) seamlessly without altering the end URL topology.
+
+**Next session starts at:**
+[ ] Megasession 5 — Telegram Bot Scaffold + Browse Flow
+
+**Environment state:**
+- Supabase: Active (realtime socket subscriptions successful & verified).
+- Next.js Web: Production hardened edge-to-edge.
+- Telegram bot: Pending scaffold.
