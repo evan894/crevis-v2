@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase";
 import { Loader2, CheckCircle2, Ticket } from "lucide-react";
 import confetti from "canvas-confetti";
+import { toast } from "react-hot-toast";
 
 function OnboardingContent() {
   const searchParams = useSearchParams();
@@ -16,7 +17,6 @@ function OnboardingContent() {
 
   const [shopName, setShopName] = useState("");
   const [category, setCategory] = useState("Clothing");
-  const [error, setError] = useState<string | null>(null);
 
   const [couponCode, setCouponCode] = useState("");
   const [redeemSuccess, setRedeemSuccess] = useState(false);
@@ -49,11 +49,10 @@ function OnboardingContent() {
 
   const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!shopName.trim()) return setError("Shop name is required");
-    if (!userId) return setError("User session not found");
+    if (!shopName.trim()) return toast.error("Shop name is required");
+    if (!userId) return toast.error("User session not found");
     
     setLoading(true);
-    setError(null);
     try {
       const { error: dbError } = await supabase.from("sellers").insert({
         user_id: userId,
@@ -64,9 +63,9 @@ function OnboardingContent() {
       setStep(2);
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setError(err.message);
+        toast.error(err.message);
       } else {
-        setError("Failed to create shop");
+        toast.error("Failed to create shop");
       }
     } finally {
       setLoading(false);
@@ -76,7 +75,6 @@ function OnboardingContent() {
   const handleRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     
     try {
       const res = await fetch("/api/credits/redeem-coupon", {
@@ -98,9 +96,9 @@ function OnboardingContent() {
       });
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setError(err.message);
+        toast.error(err.message);
       } else {
-        setError("An unexpected error occurred");
+        toast.error("An unexpected error occurred");
       }
     } finally {
       setLoading(false);
@@ -133,8 +131,6 @@ function OnboardingContent() {
             <p className="font-dm-sans text-sm text-ink-secondary mb-6">
               This will be publicly visible to your customers across all checkout links.
             </p>
-
-            {error && <div className="mb-4 p-3 bg-error-bg text-error text-sm rounded-md font-dm-sans">{error}</div>}
 
             <form onSubmit={handleStep1Submit} className="space-y-4">
               <div className="space-y-1">
@@ -228,8 +224,6 @@ function OnboardingContent() {
             <p className="font-dm-sans text-sm text-ink-secondary mb-6">
               Enter your early-access coupon code to fund your wallet and publish your first listings.
             </p>
-
-            {error && <div className="mb-4 p-3 bg-error-bg text-error text-sm rounded-md font-dm-sans">{error}</div>}
 
             {redeemSuccess ? (
               <div className="flex flex-col items-center animate-in zoom-in-95 duration-base">

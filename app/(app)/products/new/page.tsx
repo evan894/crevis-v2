@@ -6,6 +6,7 @@ import { createBrowserClient } from "@/lib/supabase";
 import { Loader2, ArrowLeft, UploadCloud, Image as ImageIcon, CheckCircle2, Wallet, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { toast } from "react-hot-toast";
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -14,8 +15,6 @@ export default function NewProductPage() {
 
   const [loading, setLoading] = useState(false);
   const [initLoading, setInitLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const [creditBalance, setCreditBalance] = useState<number>(0);
   
@@ -43,12 +42,11 @@ export default function NewProductPage() {
     if (e.target.files && e.target.files[0]) {
       const selected = e.target.files[0];
       if (!selected.type.startsWith('image/')) {
-         setError("Please select an image file.");
+         toast.error("Please select an image file.");
          return;
       }
       setFile(selected);
       setPreviewUrl(URL.createObjectURL(selected));
-      setError(null);
     }
   };
 
@@ -57,24 +55,22 @@ export default function NewProductPage() {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const selected = e.dataTransfer.files[0];
       if (!selected.type.startsWith('image/')) {
-         setError("Please drop an image file.");
+         toast.error("Please drop an image file.");
          return;
       }
       setFile(selected);
       setPreviewUrl(URL.createObjectURL(selected));
-      setError(null);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return setError("Product image is required");
-    if (!name.trim()) return setError("Product name is required");
-    if (!price || isNaN(Number(price)) || Number(price) <= 0) return setError("Valid price is required");
-    if (creditBalance < 2) return setError("Insufficient credits. Please recharge your wallet.");
+    if (!file) return toast.error("Product image is required");
+    if (!name.trim()) return toast.error("Product name is required");
+    if (!price || isNaN(Number(price)) || Number(price) <= 0) return toast.error("Valid price is required");
+    if (creditBalance < 2) return toast.error("Insufficient credits. Please recharge your wallet.");
 
     setLoading(true);
-    setError(null);
 
     try {
       // 1. Upload Image
@@ -107,15 +103,15 @@ export default function NewProductPage() {
       if (!res.ok) throw new Error(resData.error || "Failed to publish product");
 
       // 3. Success state
-      setSuccessToast(`Your ${name} is now live on the Crevis network.`);
+      toast.success(`Your ${name} is now live on the Crevis network.`);
       
       setTimeout(() => {
         router.push("/products");
-      }, 2000);
+      }, 1500);
 
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
-      else setError("An unexpected error occurred");
+      if (err instanceof Error) toast.error(err.message);
+      else toast.error("An unexpected error occurred");
       setLoading(false);
     }
   };
@@ -133,14 +129,6 @@ export default function NewProductPage() {
           <ArrowLeft className="w-4 h-4" /> Back to Inventory
         </Link>
       </nav>
-
-      {/* Success Toast */}
-      {successToast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-success-bg border border-success/20 text-success px-6 py-3 rounded-full shadow-lg animate-in slide-in-from-top-5 flex items-center gap-2 whitespace-nowrap">
-          <CheckCircle2 className="w-5 h-5" />
-          <span className="font-medium text-sm">{successToast}</span>
-        </div>
-      )}
 
       {/* Main Content */}
       <main className="max-w-[560px] mx-auto px-6 py-10">
@@ -162,8 +150,6 @@ export default function NewProductPage() {
              </Link>
            )}
         </div>
-
-        {error && <div className="mb-6 p-3 bg-error-bg text-error text-sm rounded-md border border-error/20">{error}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-8">
           
@@ -271,10 +257,10 @@ export default function NewProductPage() {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading || creditBalance < 2 || !!successToast}
+            disabled={loading || creditBalance < 2}
             className="w-full h-[54px] flex items-center justify-center bg-saffron text-surface-raised rounded-md font-medium hover:bg-saffron-dark hover:shadow-saffron active:scale-[0.98] transition-all duration-base disabled:opacity-70 disabled:cursor-not-allowed text-lg"
           >
-            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : successToast ? <CheckCircle2 className="w-6 h-6" /> : "Publish Listing"}
+            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Publish Listing"}
           </button>
         </form>
 

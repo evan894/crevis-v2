@@ -6,6 +6,7 @@ import { Loader2, ArrowLeft, Wallet as WalletIcon, CheckCircle2, TrendingUp, Tre
 import Link from "next/link";
 import Script from "next/script";
 import confetti from "canvas-confetti";
+import { toast } from "react-hot-toast";
 
 type LedgerEntry = {
   id: string;
@@ -32,7 +33,6 @@ export default function WalletPage() {
   const [checkoutLoading, setCheckoutLoading] = useState<number | null>(null);
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
-  const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     const doFetch = async () => {
@@ -87,7 +87,6 @@ export default function WalletPage() {
 
   const handlePurchase = async (amount: number) => {
     setCheckoutLoading(amount);
-    setMessage(null);
     try {
       // 1. Create order
       const res = await fetch("/api/credits/purchase", {
@@ -127,11 +126,11 @@ export default function WalletPage() {
             setBalance(verifyData.newBalance);
             fetchWalletData(); // refresh ledger
             
-            setMessage({ text: `${data.credits} credits added successfully!`, type: "success" });
+            toast.success(`${data.credits} credits added successfully!`);
             confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#F4631E', '#7C5CBF', '#1A7F4B'] });
           } catch (err: unknown) {
             if (err instanceof Error) {
-               setMessage({ text: err.message || "Payment verification failed", type: "error" });
+               toast.error(err.message || "Payment verification failed");
             }
           }
         }
@@ -140,13 +139,13 @@ export default function WalletPage() {
       // @ts-expect-error script loaded globally
       const razorpayInstance = new window.Razorpay(options);
       razorpayInstance.on('payment.failed', function () {
-         setMessage({ text: "Payment failed or was cancelled.", type: "error" });
+         toast.error("Payment failed or was cancelled.");
       });
       razorpayInstance.open();
 
     } catch (err: unknown) {
-      if (err instanceof Error) setMessage({ text: err.message, type: "error" });
-      else setMessage({ text: "Failed to initialize checkout", type: "error" });
+      if (err instanceof Error) toast.error(err.message);
+      else toast.error("Failed to initialize checkout");
     } finally {
       setCheckoutLoading(null);
     }
@@ -157,7 +156,6 @@ export default function WalletPage() {
     if (!couponCode) return;
     
     setCouponLoading(true);
-    setMessage(null);
     
     try {
       const res = await fetch("/api/credits/redeem-coupon", {
@@ -173,11 +171,11 @@ export default function WalletPage() {
       setCouponCode("");
       fetchWalletData(); // refresh ledger
       
-      setMessage({ text: "Coupon redeemed successfully!", type: "success" });
+      toast.success("Coupon redeemed successfully!");
       confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#F4631E', '#7C5CBF', '#1A7F4B'] });
     } catch (err: unknown) {
-      if (err instanceof Error) setMessage({ text: err.message, type: "error" });
-      else setMessage({ text: "Failed to redeem code", type: "error" });
+      if (err instanceof Error) toast.error(err.message);
+      else toast.error("Failed to redeem code");
     } finally {
       setCouponLoading(false);
     }
@@ -201,16 +199,7 @@ export default function WalletPage() {
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 py-10">
         
-        {/* Banner Messages */}
-        {message && (
-          <div className={`mb-8 px-4 py-3 rounded-lg flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2 ${message.type === 'success' ? 'bg-success-bg border border-success/20 text-success' : 'bg-error-bg border border-error/20 text-error'}`}>
-             <div className="flex items-center gap-2">
-                 {message.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <Loader2 className="w-5 h-5 rotate-0" />}
-                 <span className="font-medium text-sm">{message.text}</span>
-             </div>
-             <button onClick={() => setMessage(null)} className="text-sm opacity-70 hover:opacity-100">✕</button>
-          </div>
-        )}
+        {/* Banner Messages (Replaced by Toaster) */}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
            

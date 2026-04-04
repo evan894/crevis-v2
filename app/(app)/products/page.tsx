@@ -6,6 +6,7 @@ import { createBrowserClient } from "@/lib/supabase";
 import { Loader2, Zap, MoreVertical, Plus, PackageOpen, LayoutDashboard, Wallet, Power, PowerOff, Trash2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { toast } from "react-hot-toast";
 
 type Product = {
   id: string;
@@ -24,7 +25,6 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterMode>("All");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [errorToast, setErrorToast] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   
   const supabase = createBrowserClient();
@@ -62,9 +62,9 @@ export default function ProductsPage() {
       const { error } = await supabase.from('products').update({ active: !currentActive }).eq('id', id);
       if (error) throw error;
       setProducts(products.map(p => p.id === id ? { ...p, active: !currentActive } : p));
+      toast.success(currentActive ? "Product deactivated" : "Product activated");
     } catch {
-      setErrorToast("Failed to update status");
-      setTimeout(() => setErrorToast(null), 3000);
+      toast.error("Failed to update status");
     } finally {
       setActionLoading(null);
       setMenuOpen(null);
@@ -78,9 +78,9 @@ export default function ProductsPage() {
       const { error } = await supabase.from('products').delete().eq('id', id);
       if (error) throw error;
       setProducts(products.filter(p => p.id !== id));
+      toast.success("Product deleted");
     } catch {
-      setErrorToast("Failed to delete product");
-      setTimeout(() => setErrorToast(null), 3000);
+      toast.error("Failed to delete product");
     } finally {
       setActionLoading(null);
       setMenuOpen(null);
@@ -95,13 +95,13 @@ export default function ProductsPage() {
       if (!res.ok) throw new Error(data.error || "Failed to boost");
       
       setProducts(products.map(p => p.id === id ? { ...p, boosted: true } : p));
+      toast.success("Product boosted successfully");
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setErrorToast(err.message);
+        toast.error(err.message);
       } else {
-        setErrorToast("Failed to boost product");
+        toast.error("Failed to boost product");
       }
-      setTimeout(() => setErrorToast(null), 3000);
     } finally {
       setActionLoading(null);
       setMenuOpen(null);
@@ -172,13 +172,6 @@ export default function ProductsPage() {
           ))}
         </div>
 
-        {/* Error Toast */}
-        {errorToast && (
-          <div className="fixed bottom-6 right-6 z-50 bg-error-bg border border-error/20 text-error px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-bottom-5">
-            {errorToast}
-          </div>
-        )}
-
         {/* Loading State */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -214,7 +207,7 @@ export default function ProductsPage() {
           /* Product Grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProducts.map(product => (
-              <div key={product.id} className="bg-surface-raised border border-border rounded-xl overflow-hidden hover:shadow-md transition-shadow group relative flex flex-col">
+              <div key={product.id} className="bg-surface-raised border border-border rounded-xl overflow-hidden hover:shadow-md transition-all duration-base hover:-translate-y-1 group relative flex flex-col">
                 
                 {/* Image Section */}
                 <div className="aspect-square bg-surface relative overflow-hidden">

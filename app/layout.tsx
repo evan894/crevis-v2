@@ -25,6 +25,8 @@ export const metadata: Metadata = {
   description: "Sell everywhere. Start here.",
 };
 
+import { Toaster } from 'react-hot-toast';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -34,6 +36,14 @@ export default function RootLayout({
     <html lang="en" className={`${syne.variable} ${dmSans.variable} ${jetBrainsMono.variable}`}>
       <body className={`font-dm-sans antialiased`}>
         {children}
+        <Toaster position="bottom-right" toastOptions={{
+          style: {
+            fontFamily: 'var(--font-dm-sans)',
+            background: 'var(--surface)',
+            color: 'var(--ink)',
+            border: '1px solid var(--border)',
+          }
+        }} />
       </body>
     </html>
   );

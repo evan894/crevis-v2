@@ -457,47 +457,47 @@ Fix them one by one. Prioritize mobile experience."
 **Goal:** Every rough edge fixed, product deployed, demo ready.
 
 #### Session 8.1 — UI Polish (3 hours)
-- [ ] Audit every page on 375px mobile viewport — fix all layout breaks
-- [ ] Add skeleton loaders to every data-fetching component
-- [ ] Add toast notifications for all success/error states
-- [ ] Verify all empty states have illustrations and clear CTAs
-- [ ] Check all form validation messages are specific (per DESIGN.md tone)
-- [ ] Verify JetBrains Mono on all prices, amounts, balances
-- [ ] Verify Syne on all headings, DM Sans on all body text
-- [ ] Check saffron is only used for primary CTAs and highlights
-- [ ] Check credit color (#7C5CBF) only used in wallet/credit UI
-- [ ] Smooth hover animations on all product cards (translate Y -4px)
+- [x] Audit every page on 375px mobile viewport — fix all layout breaks
+- [x] Add skeleton loaders to every data-fetching component
+- [x] Add toast notifications for all success/error states
+- [x] Verify all empty states have illustrations and clear CTAs
+- [x] Check all form validation messages are specific (per DESIGN.md tone)
+- [x] Verify JetBrains Mono on all prices, amounts, balances
+- [x] Verify Syne on all headings, DM Sans on all body text
+- [x] Check saffron is only used for primary CTAs and highlights
+- [x] Check credit color (#7C5CBF) only used in wallet/credit UI
+- [x] Smooth hover animations on all product cards (translate Y -4px)
 
 #### Session 8.2 — Demo Data + Vercel Deploy (3 hours)
-- [ ] Seed 5 sample products across 3 categories with real photos
-- [ ] Ensure at least 1 product is boosted in seed data
-- [ ] Register Telegram bot webhook to production Vercel URL
-- [ ] Deploy to Vercel, set all env variables in Vercel dashboard
-- [ ] Test full demo flow on production:
+- [x] Seed 5 sample products across 3 categories with real photos
+- [x] Ensure at least 1 product is boosted in seed data
+- [x] Register Telegram bot webhook to production Vercel URL
+- [x] Deploy to Vercel, set all env variables in Vercel dashboard
+- [x] Test full demo flow on production:
       register → onboard → CREVIS100 → list product →
       Telegram browse → buy → Slack notification
-- [ ] Test on real mobile phone (not just DevTools)
-- [ ] Razorpay switched to TEST mode — confirm ₹1 transaction works
+- [x] Test on real mobile phone (not just DevTools)
+- [x] Razorpay switched to TEST mode — confirm ₹1 transaction works
 
 #### Session 8.3 — Demo Rehearsal (2 hours)
-- [ ] Write demo script (step by step, 5 minutes max)
-- [ ] Rehearse full flow 3 times without stopping
-- [ ] Identify any steps that take > 10 seconds and optimize
-- [ ] Prepare backup: screen recording of full flow as failsafe
-- [ ] Brief panel: "Open this URL on your phone. Register.
+- [x] Write demo script (step by step, 5 minutes max)
+- [x] Rehearse full flow 3 times without stopping
+- [x] Identify any steps that take > 10 seconds and optimize
+- [x] Prepare backup: screen recording of full flow as failsafe
+- [x] Brief panel: "Open this URL on your phone. Register.
       Enter CREVIS100. List a product. Then open Telegram."
-- [ ] Have Telegram bot link ready to share instantly during demo
-- [ ] Confirm Slack app installed in demo workspace before demo day
+- [x] Have Telegram bot link ready to share instantly during demo
+- [x] Confirm Slack app installed in demo workspace before demo day
 
 #### ✅ Megasession 8 Done Checklist
-- [ ] Full demo flow works on production URL on real mobile
-- [ ] CREVIS100 coupon active and working on production DB
-- [ ] 5 seed products visible on Telegram bot
-- [ ] Razorpay TEST mode ₹1 transaction completes end-to-end
-- [ ] Slack notification arrives within 3 seconds of purchase
-- [ ] No console errors on any page
-- [ ] Screen recording backup ready
-- [ ] Panel briefing message prepared and ready to share
+- [x] Full demo flow works on production URL on real mobile
+- [x] CREVIS100 coupon active and working on production DB
+- [x] 5 seed products visible on Telegram bot
+- [x] Razorpay TEST mode ₹1 transaction completes end-to-end
+- [x] Slack notification arrives within 3 seconds of purchase
+- [x] No console errors on any page
+- [x] Screen recording backup ready
+- [x] Panel briefing message prepared and ready to share
 
 ---
 
@@ -505,14 +505,14 @@ Fix them one by one. Prioritize mobile experience."
 
 | Phase | Megasession | Status | Hours Used |
 |---|---|---|---|
-| 1 | MS1 — Scaffold + Schema | ⬜ Not started | — |
-| 2 | MS2 — Auth + Onboarding | ⬜ Not started | — |
-| 3 | MS3 — Products + Wallet | ⬜ Not started | — |
-| 3 | MS4 — Dashboard | ⬜ Not started | — |
-| 4 | MS5 — Bot Scaffold + Browse | ⬜ Not started | — |
-| 4 | MS6 — Search + Buy | ⬜ Not started | — |
-| 5 | MS7 — Slack | ⬜ Not started | — |
-| 6 | MS8 — Polish + Deploy | ⬜ Not started | — |
+| 1 | MS1 — Scaffold + Schema | ✅ Done | — |
+| 2 | MS2 — Auth + Onboarding | ✅ Done | — |
+| 3 | MS3 — Products + Wallet | ✅ Done | — |
+| 3 | MS4 — Dashboard | ✅ Done | — |
+| 4 | MS5 — Bot Scaffold + Browse | ✅ Done | — |
+| 4 | MS6 — Search + Buy | ✅ Done | — |
+| 5 | MS7 — Slack | ✅ Done | — |
+| 6 | MS8 — Polish + Deploy | ✅ Done | — |
 
 Update status to:
 ⬜ Not started → 🔄 In progress → ✅ Done
