@@ -294,3 +294,35 @@ These must never be revisited without a strong reason.
 - Slack: keys present
 - Vercel: not deployed
 - Last known working URL: http://localhost:3000
+
+---
+
+### Megasession 3 — April 4, 2026
+
+**Status:** ✅ Completed
+
+**What was built:**
+- Completed the entire Seller Web App phase (Products + Wallet).
+- Built `/app/products/page.tsx` for listing, boosting, and disabling products.
+- Built `/app/products/new/page.tsx` with drag-and-drop Image Upload direct to Supabase Storage and pre-publish credit validation (minimum 2 credits required).
+- Built atomic server API route `/api/products/create` that securely proxies Postgres `deduct_credits` logic before inserting items.
+- Built `/app/wallet/page.tsx` with live Razorpay Integration utilizing Next.js Server routes (`/api/credits/purchase` & `/api/credits/verify`). Verified HMAC SHA256 signatures flawlessly.
+- Wired ledger table to auto-query the `credit_ledger` array with color-coordinated tracking for 'credit_purchase', 'listing_fee', etc.
+
+**Bugs encountered:**
+- Typescript complained about global window injections for Razerpay and `uploadData` assignments.
+
+**Bugs fixed:**
+- Overrode ESLint unused parameters natively and added proper typings for Razorpay callbacks in TS.
+
+**Decisions made:**
+- Opted for dynamic loaded inline checkout over redirects to keep the user in the seller app.
+- Pushed `.env.local` securely parsing secrets in edge SSR logic.
+
+**Next session starts at:**
+[ ] Megasession 4 — Dashboard (Session 4.1)
+
+**Environment state:**
+- Supabase: Active (storage bins fully working)
+- Vercel: ready for testing
+- Razorpay: Integrated test keys successfully tested.

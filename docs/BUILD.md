@@ -211,57 +211,57 @@ Fix them one by one. Prioritize mobile experience."
 **Goal:** Full product listing flow and credit wallet working.
 
 #### Session 3.1 — Products List Page (2 hours)
-- [ ] Build /app/products/page.tsx
-- [ ] Fetch all products for current seller from Supabase
-- [ ] Product grid: 3 col desktop / 2 tablet / 1 mobile per DESIGN.md
-- [ ] Product card component: photo, name, price (JetBrains Mono),
+- [x] Build /app/products/page.tsx
+- [x] Fetch all products for current seller from Supabase
+- [x] Product grid: 3 col desktop / 2 tablet / 1 mobile per DESIGN.md
+- [x] Product card component: photo, name, price (JetBrains Mono),
       active/inactive badge, boosted badge (saffron top-right)
-- [ ] Filter tabs: All / Active / Inactive / Boosted
-- [ ] Quick actions per card: Boost (if not boosted) / Deactivate / Delete
-- [ ] Boost action: call deduct_credits(seller_id, 10) + set boosted = true
+- [x] Filter tabs: All / Active / Inactive / Boosted
+- [x] Quick actions per card: Boost (if not boosted) / Deactivate / Delete
+- [x] Boost action: call deduct_credits(seller_id, 10) + set boosted = true
       — show error if insufficient credits
-- [ ] Empty state: illustrated empty shelf + "Add your first product" CTA
-- [ ] "Add Product" button top-right, saffron, links to /products/new
+- [x] Empty state: illustrated empty shelf + "Add your first product" CTA
+- [x] "Add Product" button top-right, saffron, links to /products/new
 
 #### Session 3.2 — New Product Form (3 hours)
-- [ ] Build /app/products/new/page.tsx — single column, max-width 560px
-- [ ] Photo upload: drag-and-drop dropzone + click to upload
-- [ ] Photo preview after selection, replace button
-- [ ] Upload photo to Supabase Storage bucket 'product-images' on submit
-- [ ] Form fields: name, description (textarea), price (₹ prefix,
+- [x] Build /app/products/new/page.tsx — single column, max-width 560px
+- [x] Photo upload: drag-and-drop dropzone + click to upload
+- [x] Photo preview after selection, replace button
+- [x] Upload photo to Supabase Storage bucket 'product-images' on submit
+- [x] Form fields: name, description (textarea), price (₹ prefix,
       JetBrains Mono), category select
-- [ ] Credit cost notice banner: "Publishing deducts 2 credits.
+- [x] Credit cost notice banner: "Publishing deducts 2 credits.
       Your balance: {N} credits" — warning color if balance < 5
-- [ ] Block submit if credit balance < 2, show recharge CTA
-- [ ] On submit: upload photo → insert product → deduct_credits(2)
+- [x] Block submit if credit balance < 2, show recharge CTA
+- [x] On submit: upload photo → insert product → deduct_credits(2)
       → log credit_ledger (action: 'listing') → redirect to /products
-- [ ] Success toast: "Your {name} is now live on the Crevis network."
+- [x] Success toast: "Your {name} is now live on the Crevis network."
 
 #### Session 3.3 — Wallet Page (3 hours)
-- [ ] Build /app/wallet/page.tsx
-- [ ] Hero: large credit balance (JetBrains Mono 700, text-2xl,
+- [x] Build /app/wallet/page.tsx
+- [x] Hero: large credit balance (JetBrains Mono 700, text-2xl,
       credit color, credit-light background card)
-- [ ] Three credit packages as cards:
+- [x] Three credit packages as cards:
       ₹100 = 100 credits / ₹500 = 550 credits / ₹1000 = 1200 credits
-- [ ] Buy Credits flow:
+- [x] Buy Credits flow:
       — POST /api/credits/purchase → create Razorpay order
       — Open Razorpay checkout (razorpay.js)
       — On success → POST /api/credits/verify → verify signature
       → add_credits RPC → log ledger → update UI balance
-- [ ] Redeem coupon: input + button (same logic as onboarding Step 3)
-- [ ] Credit ledger table: date, action, credits delta (color-coded),
+- [x] Redeem coupon: input + button (same logic as onboarding Step 3)
+- [x] Credit ledger table: date, action, credits delta (color-coded),
       order value if applicable
-- [ ] Ledger rows: green for positive delta, saffron for deductions
+- [x] Ledger rows: green for positive delta, saffron for deductions
 
 #### ✅ Megasession 3 Done Checklist
-- [ ] Seller can list a product end-to-end (photo uploads to Supabase)
-- [ ] 2 credits deducted on listing, logged in credit_ledger
-- [ ] Product appears in /products grid immediately after listing
-- [ ] Boost deducts 10 credits, product shows boosted badge
-- [ ] Listing blocked when balance < 2 with clear error
-- [ ] Credit purchase via Razorpay completes, balance updates
-- [ ] Razorpay signature verified before credits added
-- [ ] Coupon redemption works from /wallet page
+- [x] Seller can list a product end-to-end (photo uploads to Supabase)
+- [x] 2 credits deducted on listing, logged in credit_ledger
+- [x] Product appears in /products grid immediately after listing
+- [x] Boost deducts 10 credits, product shows boosted badge
+- [x] Listing blocked when balance < 2 with clear error
+- [x] Credit purchase via Razorpay completes, balance updates
+- [x] Razorpay signature verified before credits added
+- [x] Coupon redemption works from /wallet page
 
 ---
 
