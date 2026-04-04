@@ -21,6 +21,7 @@ const supabase = createClient<Database>(supabaseUrl, supabaseServiceRoleKey);
 interface SessionData {
   category?: string;
   offset?: number;
+  searchState?: string;
 }
 
 export interface BotContext extends Context {
@@ -167,10 +168,157 @@ bot.action('orders', async (ctx) => {
   }).catch(() => {});
 });
 
-// Dummy search for now
 bot.action('search', async (ctx) => {
-  await ctx.answerCbQuery("Search is coming soon!", { show_alert: true });
+  ctx.session.category = undefined;
+  ctx.session.searchState = "AWAITING_QUERY";
+  
+  await ctx.editMessageText("What are you looking for?", {
+    reply_markup: {
+      inline_keyboard: [[{ text: '⬅ Cancel', callback_data: 'main_menu' }]]
+    }
+  }).catch(() => {});
 });
+
+// Text handler for search state
+bot.on('text', async (ctx) => {
+   if (ctx.session?.searchState === "AWAITING_QUERY") {
+      ctx.session.searchState = undefined;
+      const query = ctx.message.text.trim();
+      
+      const sentMsg = await ctx.reply("🔍 Searching...");
+
+      try {
+         // Fetch all active products for the AI / fallback
+         const { data: allActiveProducts } = await supabase
+            .from('products')
+            .select('id, name, description, category, price')
+            .eq('active', true);
+
+         if (!allActiveProducts || allActiveProducts.length === 0) {
+            await ctx.telegram.editMessageText(ctx.chat.id, sentMsg.message_id, undefined, "Couldn't find that. Try browsing by category.", {
+               reply_markup: {
+                 inline_keyboard: [[{ text: '🛍 Browse Products', callback_data: 'browse' }]]
+               }
+            });
+            return;
+         }
+
+         let matchedIds: string[] = [];
+
+         try {
+             // Use dynamic import so it works even if not compiled
+             const { searchProductsWithGemini } = await import('../lib/gemini');
+             const productsJson = JSON.stringify(allActiveProducts);
+             matchedIds = await searchProductsWithGemini(query, productsJson);
+         } catch (aiError) {
+             console.error("Falling back to text search...", aiError);
+             // Fallback text match
+             const loweredQuery = query.toLowerCase();
+             matchedIds = allActiveProducts.filter(p => 
+                p.name.toLowerCase().includes(loweredQuery) || 
+                (p.description && p.description.toLowerCase().includes(loweredQuery))
+             ).map(p => p.id).slice(0, 3);
+         }
+
+         if (matchedIds.length === 0) {
+            await ctx.telegram.editMessageText(ctx.chat.id, sentMsg.message_id, undefined, "Couldn't find that. Try browsing by category.", {
+               reply_markup: {
+                 inline_keyboard: [[{ text: '🛍 Browse Products', callback_data: 'browse' }]]
+               }
+            });
+            return;
+         }
+
+         // Fetch full product details
+         const { data: matchedProducts } = await supabase
+            .from('products')
+            .select('*, sellers(shop_name)')
+            .in('id', matchedIds)
+            .eq('active', true);
+         
+         await ctx.telegram.deleteMessage(ctx.chat.id, sentMsg.message_id).catch(()=>{});
+
+         if (!matchedProducts || matchedProducts.length === 0) {
+            await ctx.reply("Couldn't find that. Try browsing by category.", {
+               reply_markup: {
+                 inline_keyboard: [[{ text: '🛍 Browse Products', callback_data: 'browse' }]]
+               }
+            });
+            return;
+         }
+
+         // Send the cards
+         for (const p of matchedProducts) {
+             const sData = Array.isArray(p.sellers) ? p.sellers[0] : p.sellers;
+             const shopName = sData?.shop_name || 'Unknown Shop';
+             const caption = `**${p.name}**\nPrice: ₹${p.price}\nShop: ${shopName}${p.boosted ? ' 🚀 *BOOSTED*' : ''}\n\n${p.description || ''}`;
+
+             await ctx.replyWithPhoto(p.photo_url, {
+               caption: caption,
+               parse_mode: 'Markdown',
+               reply_markup: {
+                 inline_keyboard: [
+                   [{ text: `Buy Now ₹${p.price}`, callback_data: `buy:${p.id}` }]
+                 ]
+               }
+             });
+         }
+         
+         // Final generic back button
+         await ctx.reply("Search completed.", {
+            reply_markup: {
+               inline_keyboard: [[{ text: '⬅ Main Menu', callback_data: 'main_menu' }]]
+            }
+         });
+
+      } catch (e) {
+         console.error("Search flow failed", e);
+         await ctx.telegram.deleteMessage(ctx.chat.id, sentMsg.message_id).catch(()=>{});
+         await ctx.reply('An error occurred during search. Please try again.');
+      }
+      return;
+   }
+});
+bot.action(/buy:(.+)/, async (ctx) => {
+   const productId = ctx.match[1];
+   const user = ctx.from;
+   if (!user) return;
+
+   const sentMsg = await ctx.reply("Creating secure payment link... ⏳");
+
+   try {
+       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+       const res = await fetch(`${appUrl}/api/payment/create-link`, {
+           method: "POST",
+           headers: { "Content-Type": "application/json" },
+           body: JSON.stringify({
+               productId,
+               buyerTelegramId: user.id.toString()
+           })
+       });
+
+       const data = await res.json();
+       if (!res.ok) {
+           throw new Error(data.error || "Failed to create payment link");
+       }
+
+       await ctx.telegram.editMessageText(ctx.chat?.id as number, sentMsg.message_id, undefined, "Tap below to pay securely 👇", {
+           reply_markup: {
+               inline_keyboard: [[{ text: '💳 Pay Now', url: data.short_url }]]
+           }
+       });
+
+   } catch (error) {
+       console.error("Buy flow error:", error);
+       await ctx.telegram.editMessageText(
+          ctx.chat?.id, 
+          sentMsg.message_id, 
+          undefined, 
+          "❌ Payment link creation failed. Please try again later."
+       );
+   }
+});
+
 
 async function sendProducts(ctx: BotContext, category: string, offset: number) {
   const { data: products, error } = await supabase

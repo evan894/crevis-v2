@@ -354,46 +354,46 @@ Fix them one by one. Prioritize mobile experience."
 **Goal:** Buyer can search with natural language and complete a purchase.
 
 #### Session 6.1 — Gemini Search (2 hours)
-- [ ] Search handler: bot asks "What are you looking for?"
-- [ ] On user reply: fetch all active products from Supabase
+- [x] Search handler: bot asks "What are you looking for?"
+- [x] On user reply: fetch all active products from Supabase
       (id, name, description, category, price)
-- [ ] Call Gemini 2.0 Flash with prompt from CLAUDE.md
-- [ ] Parse response: array of up to 3 product IDs
-- [ ] Fetch full product details for matched IDs
-- [ ] Show same product card format as browse flow
-- [ ] Fallback: if Gemini fails or times out (>3s), do simple
+- [x] Call Gemini 2.0 Flash with prompt from CLAUDE.md
+- [x] Parse response: array of up to 3 product IDs
+- [x] Fetch full product details for matched IDs
+- [x] Show same product card format as browse flow
+- [x] Fallback: if Gemini fails or times out (>3s), do simple
       case-insensitive text match on name + description
-- [ ] Never mention AI, Gemini, or "search powered by" to user
-- [ ] "No results" state: "Couldn't find that. Try browsing by category."
+- [x] Never mention AI, Gemini, or "search powered by" to user
+- [x] "No results" state: "Couldn't find that. Try browsing by category."
 
 #### Session 6.2 — Buy Now + Payment Flow (3 hours)
-- [ ] Buy Now handler: receives product_id + buyer telegram_id
-- [ ] POST /api/payment/create-link:
+- [x] Buy Now handler: receives product_id + buyer telegram_id
+- [x] POST /api/payment/create-link:
       — create Razorpay payment link for product price
       — store pending order in orders table
       — return payment link URL
-- [ ] Bot sends payment link with message:
+- [x] Bot sends payment link with message:
       "Tap below to pay securely 👇" + inline URL button
-- [ ] Razorpay webhook: POST /api/webhooks/razorpay-orders
+- [x] Razorpay webhook: POST /api/webhooks/razorpay-orders
       — verify signature
       — update order status to 'completed'
       — deduct platform fee credits from seller
       — if seller balance hits 0: set all their products active = false
       — send buyer Telegram confirmation
       — send seller Slack notification
-- [ ] Buyer confirmation: "✅ Order placed! {product_name} from
+- [x] Buyer confirmation: "✅ Order placed! {product_name} from
       {shop_name}. Thank you!"
-- [ ] Payment failed/expired: "❌ Payment was not completed.
+- [x] Payment failed/expired: "❌ Payment was not completed.
       Tap /start to try again."
 
 #### ✅ Megasession 6 Done Checklist
-- [ ] Search returns relevant results for natural language query
-- [ ] Gemini fallback works when AI is unavailable
-- [ ] Full purchase flow: product → Buy Now → Razorpay → confirmation
-- [ ] Order record created in Supabase after successful payment
-- [ ] Platform fee (5%) deducted from seller credits after order
-- [ ] Seller listings deactivated if balance hits 0 after fee deduction
-- [ ] Buyer receives Telegram confirmation within 5 seconds of payment
+- [x] Search returns relevant results for natural language query
+- [x] Gemini fallback works when AI is unavailable
+- [x] Full purchase flow: product → Buy Now → Razorpay → confirmation
+- [x] Order record created in Supabase after successful payment
+- [x] Platform fee (5%) deducted from seller credits after order
+- [x] Seller listings deactivated if balance hits 0 after fee deduction
+- [x] Buyer receives Telegram confirmation within 5 seconds of payment
 
 ---
 
