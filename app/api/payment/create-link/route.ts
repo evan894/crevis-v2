@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         amount: Math.round(product.price * 100), // in paise
         currency: 'INR',
         accept_partial: false,
-        expire_by: Math.floor(Date.now() / 1000) + (15 * 60), // 15 mins expiry
+        expire_by: Math.floor(Date.now() / 1000) + (20 * 60), // 20 mins expiry
         reference_id: receiptId,
         description: `Purchase ${product.name} from ${shopName}`,
         customer: {
