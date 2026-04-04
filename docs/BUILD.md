@@ -116,13 +116,12 @@ Fix them one by one. Prioritize mobile experience."
 - [x] Seed coupon: CREVIS100, 100 credits, unlimited uses, active
 
 #### Session 1.3 — Environment Verification (2 hours)
-- [ ] Add all real env values to .env.local
+- [x] Add all real env values to .env.local
 - [x] Write /lib/supabase.ts with typed Database interface
 - [x] Write /lib/razorpay.ts — Razorpay client init
 - [x] Write /lib/gemini.ts — Gemini 2.0 Flash client init
 - [x] Write /lib/slack.ts — Slack WebClient init
 - [x] Write /lib/credits.ts — all credit deduction/addition logic
-      using Supabase RPC functions
       using Supabase RPC functions
 - [x] Test Supabase connection with a simple select query
 - [x] Commit to GitHub: evan894/crevis-v2
@@ -148,57 +147,57 @@ Fix them one by one. Prioritize mobile experience."
 **Goal:** Full seller registration to first credit load working end-to-end.
 
 #### Session 2.1 — Auth Page (3 hours)
-- [ ] Build /app/auth/page.tsx — split layout per DESIGN.md
-- [ ] Left panel: saffron gradient mesh background, Crevis logo, tagline
-- [ ] Right panel: sign up / sign in form with toggle
-- [ ] Form fields: email, password (sign in) + name, email, password (sign up)
-- [ ] Wire up Supabase email auth (signUp + signInWithPassword)
-- [ ] On sign up success → redirect to /onboarding
-- [ ] On sign in success → redirect to /dashboard
-- [ ] Error states: wrong password, email already exists, network error
-- [ ] Loading state on submit button
-- [ ] Mobile: full-width form, logo above, no left panel
+- [x] Build /app/auth/page.tsx — split layout per DESIGN.md
+- [x] Left panel: saffron gradient mesh background, Crevis logo, tagline
+- [x] Right panel: sign up / sign in form with toggle
+- [x] Form fields: email, password (sign in) + name, email, password (sign up)
+- [x] Wire up Supabase email auth (signUp + signInWithPassword)
+- [x] On sign up success → redirect to /onboarding
+- [x] On sign in success → redirect to /dashboard
+- [x] Error states: wrong password, email already exists, network error
+- [x] Loading state on submit button
+- [x] Mobile: full-width form, logo above, no left panel
 
 #### Session 2.2 — Onboarding Step 1 + 2 (3 hours)
-- [ ] Build /app/onboarding/page.tsx — 3-step wizard
-- [ ] Step progress bar component (saffron fill, 3 steps)
-- [ ] Step 1: shop name input + category select (Clothing, Footwear,
+- [x] Build /app/onboarding/page.tsx — 3-step wizard
+- [x] Step progress bar component (saffron fill, 3 steps)
+- [x] Step 1: shop name input + category select (Clothing, Footwear,
       Accessories, Home Textiles, Other)
-- [ ] On Step 1 next: insert row into sellers table with user_id,
+- [x] On Step 1 next: insert row into sellers table with user_id,
       shop_name, category
-- [ ] Step 2: Connect Slack button → triggers Slack OAuth flow
-- [ ] Slack OAuth: /api/auth/slack route → redirect to Slack authorize URL
-- [ ] Slack OAuth callback: /api/auth/slack/callback → exchange code for
+- [x] Step 2: Connect Slack button → triggers Slack OAuth flow
+- [x] Slack OAuth: /api/auth/slack route → redirect to Slack authorize URL
+- [x] Slack OAuth callback: /api/auth/slack/callback → exchange code for
       token → save slack_user_id + slack_access_token to seller record
-- [ ] Step 2 skip option: "Skip for now" → proceed to Step 3
-- [ ] Show Slack connected confirmation state on Step 2 after OAuth
+- [x] Step 2 skip option: "Skip for now" → proceed to Step 3
+- [x] Show Slack connected confirmation state on Step 2 after OAuth
 
 #### Session 2.3 — Onboarding Step 3 + Guard (2 hours)
-- [ ] Step 3: coupon redemption UI — large input + Redeem button
-- [ ] API route: POST /api/credits/redeem-coupon
+- [x] Step 3: coupon redemption UI — large input + Redeem button
+- [x] API route: POST /api/credits/redeem-coupon
       — validate code exists + active + not exceeded max_uses
       — call add_credits RPC
       — increment coupon uses_so_far
       — log to credit_ledger (action: 'coupon')
       — return new balance
-- [ ] On success: confetti animation (canvas-confetti library) +
+- [x] On success: confetti animation (canvas-confetti library) +
       "100 credits added!" message in credit color
-- [ ] Credit balance updates live on screen after redemption
-- [ ] "Go to Dashboard" CTA after coupon step
-- [ ] Route guard: /dashboard and all protected routes redirect to
+- [x] Credit balance updates live on screen after redemption
+- [x] "Go to Dashboard" CTA after coupon step
+- [x] Route guard: /dashboard and all protected routes redirect to
       /auth if no session
-- [ ] Route guard: /onboarding redirects to /dashboard if
+- [x] Route guard: /onboarding redirects to /dashboard if
       seller record already exists
 
 #### ✅ Megasession 2 Done Checklist
-- [ ] New user can sign up, land on /onboarding, complete all 3 steps
-- [ ] Seller record created in Supabase on Step 1 completion
-- [ ] Slack OAuth flow completes, token saved to seller record
-- [ ] CREVIS100 coupon redeems successfully, 100 credits added
-- [ ] credit_ledger has a 'coupon' entry after redemption
-- [ ] Confetti fires on coupon success
-- [ ] Unauthenticated users cannot access /dashboard
-- [ ] Already-onboarded users skip /onboarding to /dashboard
+- [x] New user can sign up, land on /onboarding, complete all 3 steps
+- [x] Seller record created in Supabase on Step 1 completion
+- [x] Slack OAuth flow completes, token saved to seller record
+- [x] CREVIS100 coupon redeems successfully, 100 credits added
+- [x] credit_ledger has a 'coupon' entry after redemption
+- [x] Confetti fires on coupon success
+- [x] Unauthenticated users cannot access /dashboard
+- [x] Already-onboarded users skip /onboarding to /dashboard
 
 ---
 
