@@ -510,4 +510,19 @@ These must never be revisited without a strong reason.
 - Eliminated lingering TypeScript explicit `any` and unreferenced `lucide-react` import lint errors globally achieving zero-error `tsc --noEmit` and `next lint` completion.
 
 **Next session starts at:**
-[ ] Open / Next session as directed by user.
+[ ] Session F4
+
+---
+### Session F4 — April 4, 2026
+
+**Status:** ✅ Completed
+
+**What was built:**
+- Created `lib/constants.ts` and refactored API routes (`boost`, `create`, `razorpay-orders`, `razorpay-credits`, `purchase`) and frontend pages to import centralized values (costs, packages, fee percentages, and Slack messages).
+- Fixed bot `/bot/index.ts` any-type typing to properly inherit `SessionData`.
+- Refactored `/app/(app)/products/page.tsx` eliminating Supabase `.update()` out into protected backend API routes `api/products/[id]/toggle-active` and `api/products/[id]/delete`.
+- Abstracted duplicate fetch logic inside `app/(app)/wallet/page.tsx` directly utilizing the inner parameterless helper.
+- Overrode git authentication logic securely, pushed to production branch cleanly, updating Vercel production ENV overrides safely and registering the webhook successfully over cURL entirely validating integration.
+
+**Next session starts at:**
+[ ] Final QA / Handoff
