@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { razorpay } from '@/lib/razorpay';
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database.types';
-import { PLATFORM_FEE_PERCENT } from '@/lib/constants';
 
 const supabase = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
