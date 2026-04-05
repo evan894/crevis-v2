@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { deductCredits, deactivateSellerListings } from "@/lib/credits";
-import { supabaseAdmin } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { Database } from "@/types/database.types";
 import { CREDIT_COST_LISTING } from "@/lib/constants";
 

@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './supabase';
+import { supabaseAdmin } from './supabase-admin';
 
 type CreditAction = 'listing' | 'boost' | 'order_fee' | 'credit_purchase' | 'coupon';
 
