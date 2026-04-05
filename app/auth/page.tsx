@@ -30,6 +30,7 @@ export default function AuthPage() {
           password,
           options: {
             data: { full_name: name },
+            emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
           },
         });
         if (signUpError) throw signUpError;

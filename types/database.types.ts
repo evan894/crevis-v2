@@ -224,8 +224,10 @@ export type Database = {
           id: string
           name: string
           photo_url: string
+          photo_urls: string[]
           price: number
           seller_id: string
+          stock: number
         }
         Insert: {
           active?: boolean
@@ -236,8 +238,10 @@ export type Database = {
           id?: string
           name: string
           photo_url: string
+          photo_urls?: string[]
           price: number
           seller_id: string
+          stock?: number
         }
         Update: {
           active?: boolean
@@ -248,8 +252,10 @@ export type Database = {
           id?: string
           name?: string
           photo_url?: string
+          photo_urls?: string[]
           price?: number
           seller_id?: string
+          stock?: number
         }
         Relationships: [
           {

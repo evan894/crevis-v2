@@ -17,6 +17,7 @@ type Product = {
   active: boolean;
   boosted: boolean;
   category: string;
+  stock: number;
 };
 
 type FilterMode = "All" | "Active" | "Inactive" | "Boosted";
@@ -284,6 +285,9 @@ export default function ProductsPage() {
                   <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
                      <span className="font-syne font-bold text-[var(--color-saffron)] text-[17px]">
                         ₹{product.price.toLocaleString('en-IN')}
+                     </span>
+                     <span className="text-xs text-ink-muted bg-surface px-2 py-1 rounded-md">
+                        Stock: {product.stock ?? 1}
                      </span>
                   </div>
                 </div>

@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import Razorpay from "razorpay";
 import type { Database } from "@/types/database.types";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
 const PACKAGES: Record<number, number> = {
   100: 100,
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
 
     const order = await razorpay.orders.create(options);
 
-    const { error: insertError } = await supabase.from('credit_purchases').insert({
+    const { error: insertError } = await supabaseAdmin.from('credit_purchases').insert({
       seller_id: seller.id,
       amount_paid: amount,
       credits_added: PACKAGES[amount],

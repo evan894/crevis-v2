@@ -175,24 +175,22 @@ export default function WalletPage() {
         
         {/* Banner Messages (Replaced by Toaster) */}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-           
-           {/* Left Column: Hero & Top-up */}
-           <div className="lg:col-span-1 space-y-8">
-              
-              {/* Balance Hero Card */}
-              <div className="bg-credit-light border border-border-strong rounded-xl p-8 flex flex-col items-center text-center shadow-sm">
-                 <WalletIcon className="w-8 h-8 text-credit mb-4" />
-                 <h2 className="text-sm font-medium text-ink-secondary mb-1">Available Credits</h2>
-                 <p className="font-jetbrains-mono font-bold text-[34px] text-credit tracking-tight mb-2">
-                    {balance ?? 0}
-                 </p>
-                 <p className="text-xs text-ink-muted">1 credit = 1 listing or priority action</p>
-              </div>
+        <div className="space-y-8">
 
-              <div className="flex flex-row gap-4 items-stretch w-full">
+           {/* Balance Hero Card */}
+           <div className="bg-credit-light border border-border-strong rounded-xl p-8 flex flex-col items-center text-center shadow-sm">
+              <WalletIcon className="w-8 h-8 text-credit mb-4" />
+              <h2 className="text-sm font-medium text-ink-secondary mb-1">Available Credits</h2>
+              <p className="font-jetbrains-mono font-bold text-[34px] text-credit tracking-tight mb-2">
+                 {balance ?? 0}
+              </p>
+              <p className="text-xs text-ink-muted">1 credit = 1 listing or priority action</p>
+           </div>
+
+           {/* Top-up + Coupon side by side */}
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
               {/* Purchase Packages */}
-              <div className="flex-1 bg-surface-raised border border-border rounded-xl p-6">
+              <div className="min-w-0 bg-surface-raised border border-border rounded-xl p-6">
                  <h3 className="font-syne font-bold text-lg text-ink mb-4">Top up wallet</h3>
                  <div className="flex flex-col gap-3">
                     {CREDIT_PACKAGES.map((pkg) => (
@@ -206,8 +204,8 @@ export default function WalletPage() {
                          {checkoutLoading === pkg.amount ? (
                            <Loader2 className="w-5 h-5 text-saffron animate-spin" />
                          ) : (
-                           <span className="font-medium text-saffron text-sm bg-saffron/10 px-3 py-1 rounded-md group-hover:bg-saffron group-hover:text-surface-raised transition-colors">
-                              +{pkg.credits} C
+                           <span className="font-medium text-saffron text-sm bg-saffron/10 px-3 py-1 rounded-md group-hover:bg-saffron group-hover:text-surface-raised transition-colors whitespace-nowrap">
+                              +{pkg.credits.toLocaleString()} C
                            </span>
                          )}
                        </button>
@@ -216,17 +214,17 @@ export default function WalletPage() {
               </div>
 
               {/* Redeem Coupon */}
-              <div className="flex-1 bg-surface-raised border border-border rounded-xl p-6">
+              <div className="min-w-0 bg-surface-raised border border-border rounded-xl p-6">
                  <h3 className="font-syne font-bold text-lg text-ink mb-2">Have a coupon?</h3>
                  <p className="text-xs text-ink-secondary mb-4">Redeem your code for free credits.</p>
-                 
+
                  <form onSubmit={handleRedeemCoupon} className="flex gap-2">
                     <input
                       type="text"
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                       placeholder="e.g. CREVIS100"
-                      className="flex-1 h-[44px] px-3 bg-surface border border-border-strong rounded-md font-jetbrains-mono text-sm uppercase tracking-wider focus:border-saffron focus:ring-1 focus:ring-saffron outline-none transition-all"
+                      className="flex-1 min-w-0 h-[44px] px-3 bg-surface border border-border-strong rounded-md font-jetbrains-mono text-sm uppercase tracking-wider focus:border-saffron focus:ring-1 focus:ring-saffron outline-none transition-all"
                     />
                     <button
                       type="submit"
@@ -237,12 +235,10 @@ export default function WalletPage() {
                     </button>
                  </form>
               </div>
-              </div>
-
            </div>
 
-           {/* Right Column: Ledger */}
-           <div className="lg:col-span-2">
+           {/* Ledger */}
+           <div>
               <div className="bg-surface-raised border border-border rounded-xl overflow-hidden h-full flex flex-col">
                  <div className="p-6 border-b border-border">
                     <h3 className="font-syne font-bold text-xl text-ink">Transaction History</h3>

@@ -9,7 +9,7 @@ import { CREDIT_COST_LISTING } from "@/lib/constants";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, description, price, category, photo_url } = body;
+    const { name, description, price, category, photo_url, photo_urls, stock } = body;
 
     if (!name || !price || !category || !photo_url) {
        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -44,6 +44,8 @@ export async function POST(request: Request) {
        price: parseFloat(price),
        category,
        photo_url,
+       photo_urls: photo_urls || [],
+       stock: stock || 1,
        active: true,
        boosted: false
     }).select().single();

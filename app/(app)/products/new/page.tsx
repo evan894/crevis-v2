@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase";
-import { Loader2, UploadCloud, Image as ImageIcon, Wallet, RefreshCcw } from "lucide-react";
+import { Loader2, Image as ImageIcon, Wallet, RefreshCcw, X } from "lucide-react";
 import Link from "next/link";
 import { CATEGORIES, CREDIT_COST_LISTING } from "@/lib/constants";
 import Image from "next/image";
@@ -18,13 +18,14 @@ export default function NewProductPage() {
   const [initLoading, setInitLoading] = useState(true);
 
   const [creditBalance, setCreditBalance] = useState<number>(0);
-  
+
   // Form State
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [stock, setStock] = useState("1");
   const [category, setCategory] = useState("Clothing");
 
   useEffect(() => {
@@ -39,55 +40,66 @@ export default function NewProductPage() {
     fetchBalance();
   }, [supabase]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selected = e.target.files[0];
-      if (!selected.type.startsWith('image/')) {
-         toast.error("Please select an image file.");
-         return;
-      }
-      setFile(selected);
-      setPreviewUrl(URL.createObjectURL(selected));
+  const addFiles = (newFiles: File[]) => {
+    const imageFiles = newFiles.filter(f => f.type.startsWith('image/'));
+    if (imageFiles.length < newFiles.length) {
+      toast.error("Only image files are allowed.");
     }
+    const combined = [...files, ...imageFiles].slice(0, 5);
+    setFiles(combined);
+    setPreviewUrls(combined.map(f => URL.createObjectURL(f)));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      addFiles(Array.from(e.target.files));
+    }
+    // reset input so same file can be re-selected
+    e.target.value = "";
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const selected = e.dataTransfer.files[0];
-      if (!selected.type.startsWith('image/')) {
-         toast.error("Please drop an image file.");
-         return;
-      }
-      setFile(selected);
-      setPreviewUrl(URL.createObjectURL(selected));
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addFiles(Array.from(e.dataTransfer.files));
     }
+  };
+
+  const removeFile = (index: number) => {
+    const updated = files.filter((_, i) => i !== index);
+    setFiles(updated);
+    setPreviewUrls(updated.map(f => URL.createObjectURL(f)));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return toast.error("Product image is required");
+    if (files.length === 0) return toast.error("At least one product image is required");
     if (!name.trim()) return toast.error("Product name is required");
     if (!price || isNaN(Number(price)) || Number(price) <= 0) return toast.error("Valid price is required");
+    if (!stock || isNaN(Number(stock)) || Number(stock) < 1) return toast.error("Stock must be at least 1");
     if (creditBalance < CREDIT_COST_LISTING) return toast.error("Insufficient credits. Please recharge your wallet.");
 
     setLoading(true);
 
     try {
-      // 1. Upload Image
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(fileName, file, { cacheControl: '3600', upsert: false });
+      // Upload all photos
+      const uploadedUrls: string[] = [];
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-      if (uploadError) throw new Error("Image upload failed: " + uploadError.message);
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(fileName, file, { cacheControl: '3600', upsert: false });
 
-      // Extract public URL
-      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+        if (uploadError) throw new Error("Image upload failed: " + uploadError.message);
 
-      // 2. Call API to insert and deduct credits
+        const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+        uploadedUrls.push(publicUrl);
+      }
+
+      const coverPhoto = uploadedUrls[0];
+
       const res = await fetch("/api/products/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -96,16 +108,17 @@ export default function NewProductPage() {
           description,
           price: Number(price),
           category,
-          photo_url: publicUrl
+          stock: Number(stock),
+          photo_url: coverPhoto,
+          photo_urls: uploadedUrls,
         })
       });
 
       const resData = await res.json();
       if (!res.ok) throw new Error(resData.error || "Failed to publish product");
 
-      // 3. Success state
       toast.success(`Your ${name} is now live on the Crevis network.`);
-      
+
       setTimeout(() => {
         router.push("/products");
       }, 1500);
@@ -123,8 +136,6 @@ export default function NewProductPage() {
 
   return (
     <div className="min-h-screen bg-surface selection:bg-saffron selection:text-surface-raised font-dm-sans pb-20">
-      
-
 
       {/* Main Content */}
       <main className="max-w-[560px] mx-auto px-6 py-10">
@@ -148,43 +159,64 @@ export default function NewProductPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          
-          {/* Photo Dropzone */}
+
+          {/* Photo Upload — up to 5 */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-ink block">Product Photo <span className="text-error">*</span></label>
-            
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={handleDrop}
-              className={`relative bg-surface-raised border-2 border-dashed ${previewUrl ? 'border-border' : 'border-border-strong hover:border-saffron'} rounded-xl aspect-square sm:aspect-[4/3] flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-colors duration-fast group`}
-            >
-              {previewUrl ? (
-                <>
-                  <Image src={previewUrl} alt="Preview" fill className="object-cover" />
-                  <div className="absolute inset-0 bg-ink/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                     <span className="bg-surface-raised text-ink px-4 py-2 rounded-md font-medium text-sm shadow-sm flex items-center gap-2">
-                        <UploadCloud className="w-4 h-4" /> Replace Image
-                     </span>
+            <label className="text-sm font-medium text-ink block">
+              Product Photos <span className="text-error">*</span>
+              <span className="text-ink-muted font-normal ml-2">({files.length}/5)</span>
+            </label>
+
+            {/* Thumbnails row */}
+            {previewUrls.length > 0 && (
+              <div className="flex gap-3 flex-wrap mb-3">
+                {previewUrls.map((url, i) => (
+                  <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-border group">
+                    <Image src={url} alt={`Photo ${i + 1}`} fill className="object-cover" />
+                    {i === 0 && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-saffron/80 text-surface-raised text-[9px] font-bold text-center py-0.5">
+                        Cover
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeFile(i)}
+                      className="absolute top-1 right-1 w-5 h-5 bg-ink/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3 text-white" />
+                    </button>
                   </div>
-                </>
-              ) : (
+                ))}
+              </div>
+            )}
+
+            {/* Dropzone — only show if under 5 */}
+            {files.length < 5 && (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={handleDrop}
+                className="relative bg-surface-raised border-2 border-dashed border-border-strong hover:border-saffron rounded-xl aspect-[4/3] flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-colors duration-fast group"
+              >
                 <div className="text-center p-6">
                   <div className="w-12 h-12 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-saffron/10 transition-colors">
                     <ImageIcon className="w-6 h-6 text-ink-muted group-hover:text-saffron transition-colors" />
                   </div>
-                  <p className="font-medium text-ink mb-1">Click or drag image to upload</p>
-                  <p className="text-xs text-ink-muted">High quality JPG, PNG, WEBP (max 5MB)</p>
+                  <p className="font-medium text-ink mb-1">
+                    {files.length === 0 ? "Click or drag images to upload" : "Add more photos"}
+                  </p>
+                  <p className="text-xs text-ink-muted">Up to 5 photos · JPG, PNG, WEBP</p>
                 </div>
-              )}
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                accept="image/*"
-                onChange={handleFileChange}
-              />
-            </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileChange}
+                />
+              </div>
+            )}
           </div>
 
           {/* Product Details */}
@@ -221,18 +253,31 @@ export default function NewProductPage() {
                </div>
 
                <div className="space-y-1">
-                 <label className="text-xs font-medium text-ink-secondary ml-1">Category <span className="text-error">*</span></label>
-                 <select
-                   value={category}
-                   onChange={(e) => setCategory(e.target.value)}
+                 <label className="text-xs font-medium text-ink-secondary ml-1">Stock quantity <span className="text-error">*</span></label>
+                 <input
+                   type="number"
+                   min="1"
+                   value={stock}
+                   onChange={(e) => setStock(e.target.value)}
                    disabled={loading}
-                   className="w-full h-[44px] px-3 bg-surface border border-border rounded-md text-base text-ink focus:border-saffron focus:ring-1 focus:ring-saffron outline-none transition-all duration-fast appearance-none"
-                 >
-                   {CATEGORIES.map(cat => (
-                     <option key={cat} value={cat}>{cat}</option>
-                   ))}
-                 </select>
+                   className="w-full h-[44px] px-3 bg-surface border border-border rounded-md font-jetbrains-mono text-base text-ink focus:border-saffron focus:ring-1 focus:ring-saffron outline-none transition-all duration-fast"
+                   placeholder="1"
+                 />
                </div>
+             </div>
+
+             <div className="space-y-1">
+               <label className="text-xs font-medium text-ink-secondary ml-1">Category <span className="text-error">*</span></label>
+               <select
+                 value={category}
+                 onChange={(e) => setCategory(e.target.value)}
+                 disabled={loading}
+                 className="w-full h-[44px] px-3 bg-surface border border-border rounded-md text-base text-ink focus:border-saffron focus:ring-1 focus:ring-saffron outline-none transition-all duration-fast appearance-none"
+               >
+                 {CATEGORIES.map(cat => (
+                   <option key={cat} value={cat}>{cat}</option>
+                 ))}
+               </select>
              </div>
 
              <div className="space-y-1">
