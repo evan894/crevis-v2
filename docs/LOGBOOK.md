@@ -526,3 +526,27 @@ These must never be revisited without a strong reason.
 
 **Next session starts at:**
 [ ] Final QA / Handoff
+
+---
+### Session F5 — April 5, 2026 — Critical Bug Fix
+
+**Status:** ✅ Completed
+
+**What was built:**
+- Fixed critical production bug: `/auth` page showed blank screen after split-second flash.
+
+**Root cause:**
+`supabaseAdmin` was initialized at module load time inside `lib/supabase.ts` using `SUPABASE_SERVICE_ROLE_KEY`. Since `app/auth/page.tsx` is a `"use client"` component that imports from `lib/supabase.ts`, the entire module ran in the browser bundle. `SUPABASE_SERVICE_ROLE_KEY` is a server-only env var — Next.js never embeds it in client bundles — so it was `undefined` in the browser. `createClient(url, undefined)` throws `"supabaseKey is required."` synchronously during module import, crashing React hydration. The SSR HTML was visible for a split second (from pre-rendering) then went blank as hydration failed.
+
+**Bugs fixed:**
+- Moved `supabaseAdmin` from `lib/supabase.ts` to new `lib/supabase-admin.ts` (server-only file).
+- `lib/supabase.ts` now contains only `createBrowserClient` — safe to import in client components.
+- Updated all 5 import sites: `lib/credits.ts`, `api/products/create`, `api/products/[id]/boost`, `api/products/[id]/toggle-active`, `api/products/[id]/delete`.
+- TypeScript and build both pass clean.
+- Pushed to main → Vercel deploy triggered.
+
+**Environment state:**
+- Supabase: Active
+- Vercel: Deploying b23a097 → crevis-v2.vercel.app
+- `/auth` page should now load fully without blank screen
+---
