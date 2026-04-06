@@ -729,3 +729,56 @@ These must never be revisited without a strong reason.
 - `npm run build`: 38 pages, exit 0
 - `npx tsc --noEmit`: clean
 ---
+
+### Session R6 — April 7, 2026 — Integration Audit + Demo Prep
+
+**Status:** ✅ Completed
+
+**R6.1 — Full codebase audit (all 4 flows)**
+Read every file involved in Flows 1–4: `agent/page.tsx`, `delivery/page.tsx`, `dashboard/page.tsx`, `team/page.tsx`, all 4 API action routes, `middleware.ts`, `lib/permissions.ts`. Cross-referenced against live DB schema via MCP.
+
+**R6.2 — Test accounts seeded**
+Created 3 confirmed auth users and store members on Bombay Curations (demo store):
+- `sales_agent@test.com` → `sales_agent`
+- `delivery_agent@test.com` → `delivery_agent`
+- `manager@test.com` → `manager`
+- Password: `Crevis@123`
+
+**R6.3 — 5 demo products confirmed**
+Bombay Curations already fully stocked — Vintage OMEGA Watch, Denim Jacket, Leather Backpack, Knit Sweater, Canvas Sneakers.
+
+**Bugs found and fixed:**
+
+**Bug 1 (CRITICAL) — Agent "New" tab always empty after R5**
+`app/(agent)/agent/page.tsx` — `newOrders` filter checked `delivery.status === null` only. R5 webhook auto-creates `delivery_orders` with `status='pending'`, so every new order landed invisible. Fixed: filter now includes `o.delivery.status === "pending"`. Also added `"pending"` to `DeliveryOrder.status` TypeScript union.
+
+**Bug 2 — Permission key mismatch**
+`app/(app)/team/page.tsx` — UI used `"update_delivery_status"` but `lib/permissions.ts` defines `"update_delivery"`. Custom roles with delivery permission would silently fail middleware checks. Fixed: aligned key, also added missing `"manage_settings"` to permissions list.
+
+**Bug 3 — Out-of-stock left stock non-zero**
+`app/api/agent/orders/[id]/action/route.ts` — `out_of_stock` set `active: false` but left `stock` at prior value. Fixed: now updates `{ active: false, stock: 0 }`.
+
+**Other:**
+- Git remote PAT was stale. Updated remote URL to active token.
+- `npx tsc --noEmit`: clean after fixes. `npm run build`: 38 pages, exit 0.
+
+**Flow status:**
+
+| Flow | Status |
+|------|--------|
+| Flow 1 — Full order lifecycle | ✅ Code correct (Bug 1 fixed) |
+| Flow 2 — Team management | ✅ Code correct (Bug 2 fixed) |
+| Flow 3 — Admin workspace | ✅ No issues found |
+| Flow 4 — Edge cases | ✅ Bug 3 fixed; OTP lockout correct |
+
+**Deferred (manual only):**
+- Live mobile e2e test (requires real Razorpay payment + Telegram session)
+- Slack/Telegram < 3s/5s latency checks
+- Browser console error scan
+
+**Environment state:**
+- Supabase: Active — 3 test accounts seeded
+- Vercel: ✅ Deployed (commit 6ff0d62)
+- `npm run build`: 38 pages, exit 0
+- `npx tsc --noEmit`: clean
+---
