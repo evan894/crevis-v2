@@ -66,6 +66,12 @@ export async function POST(req: Request) {
            credits_deducted: fee
        }).eq('id', order.id);
 
+       // 1b. Auto-create delivery_orders record (pending) if not already present
+       await supabase.from('delivery_orders').upsert(
+           { order_id: order.id, status: 'pending' },
+           { onConflict: 'order_id', ignoreDuplicates: true }
+       );
+
        // 2. Deduct platform fee (5%)
        let newBalance: number | null = null;
        try {
@@ -94,7 +100,7 @@ export async function POST(req: Request) {
        try {
            await bot.telegram.sendMessage(
               order.buyer_telegram_id,
-              `✅ Order placed! ${productName} from ${shopName}. Thank you!`
+              `✅ Order placed! ${productName} from ${shopName}.\n\nYou'll receive updates here as your order is packed and delivered.\nKeep this chat open — your OTP for delivery confirmation will be sent when your order is packed.`
            );
        } catch (tgErr) {
            console.error("Buyer telegram notification failed", tgErr);

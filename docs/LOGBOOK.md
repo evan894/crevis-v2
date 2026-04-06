@@ -620,3 +620,53 @@ These must never be revisited without a strong reason.
 - Agent dashboard URL: https://crevis-v2.vercel.app/agent
 - `delivery_orders` table: active and wired end-to-end
 ---
+
+### Session R4 — April 6, 2026 — Delivery Agent Mobile Dashboard
+
+**Status:** ✅ Completed
+
+**What was built:**
+- `app/(agent)/delivery/page.tsx` — Mobile-first delivery agent dashboard (`max-w-lg`, centered). Purple role badge for `delivery_agent`. Three sections:
+  - **Stats row**: Ready (amber) / En Route (blue) / Delivered Today (green) — colour-coded, live counts.
+  - **Tab bar**: Ready | Out for Delivery | Completed.
+  - **Ready tab** — `ReadyCard`: product photo, buyer name, packed timestamp, "Pick Up Order" full-width saffron CTA. On tap: `status → out_for_delivery`, Telegram buyer notified.
+  - **Out for Delivery tab** — `OutForDeliveryCard`: 6-box OTP input (`OtpInput` component) with individual `<input>` refs, cross-box focus management on type/backspace, paste support. "Confirm Delivery" button disabled until all 6 digits filled. Wrong OTP shows inline error + attempts remaining. After 3 failures: input replaced with locked warning, API returns `{ locked: true }`. "Report Failed Delivery" link opens `FailedDeliveryModal` — reason dropdown (4 options) + optional notes textarea, bottom-sheet on mobile.
+  - **Completed tab** — `CompletedCard`: today-scoped (local midnight), read-only, delivered time + amount.
+  - Access denied screen for wrong roles (reuses pattern from agent page).
+- `app/api/delivery/orders/route.ts` — GET: resolves `seller_id` via `store_members`, returns `packed` / `out_for_delivery` / `delivered` records joined with order + product data, role-gated.
+- `app/api/delivery/orders/[id]/action/route.ts` — POST, three actions:
+  - `pick_up` → `status = out_for_delivery`, sets `agent_id` + `picked_up_at`, Telegram buyer notify.
+  - `confirm_delivery` → verifies OTP, increments `otp_attempts` server-side, returns `{ wrong_otp, attempts_left }` on mismatch or `{ locked: true }` at limit. On success: `status = delivered`, `orders.status = completed`, Telegram + Slack.
+  - `report_failed` → `status = failed_delivery` with `failure_reason`, `orders.status = failed`, Telegram + Slack with reason and notes.
+
+**Bugs encountered:**
+- None — clean first pass.
+
+**Bugs fixed:**
+- None.
+
+**Decisions made:**
+- OTP attempts tracked server-side only (`otp_attempts` column incremented in Postgres). Client never trusts its own count.
+- Wrong-OTP response is structured JSON (`wrong_otp: true`, `attempts_left: N`) rather than a 4xx — lets the client show inline state without a disruptive toast.
+- Completed tab filtered to today (local midnight) — operational clarity, avoids week-old clutter.
+- `OtpInput` uses 6 individual `useRef` instances for imperative focus management — simpler than a single controlled string with cursor tricks.
+- `FailedDeliveryModal` uses `items-end sm:items-center` so it slides up from the bottom on mobile (thumb-friendly) and centres on desktop.
+
+**What was skipped / deferred:**
+- None — full Phase 7 scope complete.
+
+**Next session starts at:**
+[ ] Define Phase 8 scope with user — candidates: analytics dashboard, marketing landing page, or production hardening.
+
+**Environment state:**
+- Supabase: Active — `store_members`, `custom_roles`, `delivery_orders` all live with RLS
+- Vercel: ✅ Deployed at crevis-v2.vercel.app (commit a70db06)
+- Telegram bot: Webhook active at `/api/telegram/webhook`
+- Razorpay: Test mode active
+- Slack: OAuth active, DM pipeline wired
+- Delivery dashboard: https://crevis-v2.vercel.app/delivery
+- Agent dashboard: https://crevis-v2.vercel.app/agent
+- Admin workspace: https://crevis-v2.vercel.app/admin/stores
+- Team page: https://crevis-v2.vercel.app/team
+---
+
