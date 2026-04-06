@@ -14,7 +14,7 @@ import { toast } from "react-hot-toast";
 type DeliveryOrder = {
   id: string;
   order_id: string;
-  status: "confirmed" | "packed" | "out_for_delivery" | "delivered" | "failed_delivery" | null;
+  status: "pending" | "confirmed" | "packed" | "out_for_delivery" | "delivered" | "failed_delivery" | null;
   otp: string | null;
   packed_at: string | null;
 };
@@ -352,9 +352,11 @@ export default function AgentPage() {
 
   // ── Derived lists ──────────────────────────────────────────────────────────
 
-  // "New" = completed payments with no delivery record OR delivery status = null
+  // "New" = completed payments with no delivery record, null status, or 'pending'
+  // (R5 webhook auto-creates delivery_orders with status='pending' on payment)
   const newOrders = orders.filter(o =>
-    o.status === "completed" && (!o.delivery || o.delivery.status === null)
+    o.status === "completed" &&
+    (!o.delivery || o.delivery.status === null || o.delivery.status === "pending")
   );
 
   // "Packing" = delivery status = 'confirmed'

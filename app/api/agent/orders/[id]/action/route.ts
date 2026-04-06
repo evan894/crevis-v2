@@ -155,11 +155,11 @@ export async function POST(
           { onConflict: "order_id" }
         );
 
-      // Zero out product stock (schema has stock column from migration 0008)
+      // Deactivate product and zero stock
       if (productId) {
         await supabaseAdmin
           .from("products")
-          .update({ active: false })
+          .update({ active: false, stock: 0 })
           .eq("id", productId);
       }
 

@@ -12,17 +12,18 @@ import { toast } from "react-hot-toast";
 
 type Permission =
   | "view_dashboard" | "manage_products" | "view_orders" | "pack_orders"
-  | "update_delivery_status" | "purchase_credits" | "manage_team" | "view_analytics";
+  | "update_delivery" | "purchase_credits" | "manage_team" | "view_analytics" | "manage_settings";
 
 const ALL_PERMISSIONS: { key: Permission; label: string }[] = [
-  { key: "view_dashboard", label: "View Dashboard" },
-  { key: "manage_products", label: "Manage Products" },
-  { key: "view_orders", label: "View Orders" },
-  { key: "pack_orders", label: "Pack Orders" },
-  { key: "update_delivery_status", label: "Update Delivery Status" },
+  { key: "view_dashboard",   label: "View Dashboard" },
+  { key: "manage_products",  label: "Manage Products" },
+  { key: "view_orders",      label: "View Orders" },
+  { key: "pack_orders",      label: "Pack Orders" },
+  { key: "update_delivery",  label: "Update Delivery Status" },
   { key: "purchase_credits", label: "Purchase Credits" },
-  { key: "manage_team", label: "Manage Team" },
-  { key: "view_analytics", label: "View Analytics" },
+  { key: "manage_team",      label: "Manage Team" },
+  { key: "view_analytics",   label: "View Analytics" },
+  { key: "manage_settings",  label: "Manage Settings" },
 ];
 
 type StandardRole = "owner" | "manager" | "sales_agent" | "delivery_agent" | "custom";

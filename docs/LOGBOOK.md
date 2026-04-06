@@ -670,3 +670,62 @@ These must never be revisited without a strong reason.
 - Team page: https://crevis-v2.vercel.app/team
 ---
 
+### Session R5 — April 6, 2026 — Order State Machine + Dashboard Updates
+
+**Status:** ✅ Completed
+
+**What was built:**
+
+**R5.1 — Delivery status in dashboard orders table**
+- `app/(app)/dashboard/page.tsx` rewritten. Orders query now joins `delivery_orders(status, agent_id)` so each row carries the full delivery state.
+- `Status` column renamed to **Delivery Status** and replaced with `deliveryBadge()` helper mapping all 6 delivery states to semantic color badges:
+  - `pending` → grey ("Awaiting packing")
+  - `confirmed` → amber ("Confirmed")
+  - `packed` → blue ("Packed, awaiting pickup")
+  - `out_for_delivery` → info blue ("Out for delivery")
+  - `delivered` → success green ("Delivered ✅")
+  - `failed_delivery` → error red ("Failed ❌")
+- Old payment `status` column (pending/completed/failed) removed from the table — delivery status tells the full story to the seller.
+
+**R5.2 — Auto-create delivery_orders on payment**
+- `app/api/webhooks/razorpay-orders/route.ts`: after updating order `status = 'completed'`, immediately upserts a `delivery_orders` row `{ order_id, status: 'pending' }` with `ignoreDuplicates: true` so every confirmed payment has a delivery record from the start.
+- This closes the gap where agents would only see orders that had been manually acted on. Now every new order appears in the agent queue on arrival.
+
+**R5.3 — Team Activity section for owners and managers**
+- Dashboard checks the caller's `store_members.role`. If `owner` or `manager`, a **Team Activity Today** section is rendered below the orders table.
+- Queries `delivery_orders` for `packed_at >= today` (sales agents) and `delivered_at >= today` (delivery agents), tallies per `agent_id`, then resolves display names via `store_members` + `sellers`.
+- Table columns: Member (avatar initials + name) / Role badge / Orders Today (saffron count if > 0, muted grey if 0).
+- Empty state links to `/team` if no members exist yet.
+
+**R5.4 — Updated Telegram order confirmation**
+- `app/api/webhooks/razorpay-orders/route.ts` Telegram message updated from a brief thank-you to a two-line message explaining what happens next:
+  > "✅ Order placed! {product_name} from {shop_name}.\n\nYou'll receive updates here as your order is packed and delivered. Keep this chat open — your OTP for delivery confirmation will be sent when your order is packed."
+- OTP is still sent separately from the sales agent dashboard when the order is marked as packed — this message sets that expectation correctly.
+
+**Bugs encountered:**
+- None.
+
+**Bugs fixed:**
+- None.
+
+**Decisions made:**
+- Dashboard `delivery_orders` join uses `.maybeSingle()` equivalent (array or null) — orders that somehow have no delivery record default to `pending` badge rather than crashing.
+- Team activity query runs two separate fetches (packed today, delivered today) and aggregates client-side — avoids a complex join, acceptable at current scale.
+- Removed payment `status` column from dashboard table entirely — the delivery status conveys this information more usefully (a `delivered` order is implicitly paid).
+
+**What was skipped / deferred:**
+- Real-time delivery status updates on the dashboard (Supabase realtime is already wired for `orders` but not yet for `delivery_orders` — can be added in R6 if needed).
+- Agent name column in the orders table — `agent_id` is fetched but not resolved to a display name yet (needs a lookup; deferred to keep R5 scope tight).
+
+**Next session starts at:**
+[ ] Session R6 — as directed by user.
+
+**Environment state:**
+- Supabase: Active — all tables live
+- Vercel: ✅ Deployed at crevis-v2.vercel.app (commit a7a62ea)
+- Telegram bot: Webhook active, updated confirmation message live
+- Razorpay: Test mode active
+- Slack: Connected
+- `npm run build`: 38 pages, exit 0
+- `npx tsc --noEmit`: clean
+---
