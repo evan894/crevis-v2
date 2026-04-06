@@ -42,9 +42,46 @@
 
 ---
 
+## 2026-04-06 — Phase 7 SESSION R1: DB Schema + Role Middleware
+
+### R1.1: Migration 0009_multi_role_system.sql ✅
+- Created `supabase/migrations/0009_multi_role_system.sql`
+- New tables: `store_members`, `custom_roles`, `delivery_orders`
+- RLS enabled on all three; policies for owner, member, agent
+- Seeds all existing sellers as `owner` in store_members
+- **Manual step required**: Run migration in Supabase SQL Editor
+
+### R1.2: lib/permissions.ts ✅
+- `Role` type: owner | manager | sales_agent | delivery_agent | custom
+- `Permission` type: 8 permissions
+- `ROLE_PERMISSIONS` map + `hasPermission()` helper
+
+### R1.3: lib/roles.ts ✅
+- `getMemberContext(userId)` — fetches role + custom permissions via supabaseAdmin
+- `requirePermission(userId, permission)` — throws if permission denied
+- Checks `ADMIN_EMAIL` for platform admin bypass
+
+### R1.4: middleware.ts updated ✅
+- Fetches `store_members` role via session SSR client (RLS: member_read_own)
+- Role-based routing: sales_agent → /agent, delivery_agent → /delivery, owner/manager → /dashboard
+- `/admin/*` requires `ADMIN_EMAIL` match
+- Users with no store_members record (mid-onboarding) routed to /onboarding
+- Platform admin bypasses all role checks
+
+### Onboarding updated ✅
+- `app/onboarding/page.tsx` now inserts into `store_members` with role 'owner' after seller creation
+- Ensures new sellers have a membership record immediately
+
+### typecheck + build ✅
+- `npx tsc --noEmit` — clean
+- `npm run build` — 21 pages, no errors
+
+---
+
 ## Pending manual steps (owner action required)
 
-1. **Supabase Dashboard** → Run SQL from `supabase/migrations/0008_add_stock_and_photo_urls.sql`
+1. **Supabase Dashboard** → Run SQL from `supabase/migrations/0008_add_stock_and_photo_urls.sql` (if not done)
+2. **Supabase Dashboard** → Run SQL from `supabase/migrations/0009_multi_role_system.sql`
 2. **Supabase Dashboard** → Authentication → URL Configuration → set Site URL + Redirect URLs
 3. **Slack app settings** → Remove localhost redirect URL, confirm production URL only
 4. **Vercel Dashboard** → Confirm `NEXT_PUBLIC_APP_URL=https://crevis-v2.vercel.app` is set for Preview too (currently Production-only)

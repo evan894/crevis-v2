@@ -65,6 +65,14 @@ function OnboardingContent() {
         category: category,
       }).select("id").single();
       if (dbError) throw dbError;
+
+      // Seed the new seller as store owner in store_members
+      await supabase.from("store_members").insert({
+        seller_id: newSeller.id,
+        user_id: userId,
+        role: "owner",
+      });
+
       setSellerId(newSeller.id);
       setStep(2);
     } catch (err: unknown) {

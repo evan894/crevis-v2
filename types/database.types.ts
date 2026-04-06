@@ -14,6 +14,151 @@ export type Database = {
   }
   public: {
     Tables: {
+      // NOTE: custom_roles, delivery_orders, store_members added for migration 0009.
+      // Regenerate with: npx supabase gen types typescript --project-id <id> > types/database.types.ts
+      custom_roles: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          permissions: Json
+          seller_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          permissions?: Json
+          seller_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          permissions?: Json
+          seller_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_roles_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_orders: {
+        Row: {
+          agent_id: string | null
+          created_at: string
+          delivered_at: string | null
+          failure_reason: string | null
+          id: string
+          order_id: string
+          otp: string | null
+          otp_attempts: number
+          otp_generated_at: string | null
+          packed_at: string | null
+          picked_up_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          order_id: string
+          otp?: string | null
+          otp_attempts?: number
+          otp_generated_at?: string | null
+          packed_at?: string | null
+          picked_up_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          order_id?: string
+          otp?: string | null
+          otp_attempts?: number
+          otp_generated_at?: string | null
+          packed_at?: string | null
+          picked_up_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_orders_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_members: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          custom_role_id: string | null
+          id: string
+          is_active: boolean
+          role: string
+          seller_id: string
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          custom_role_id?: string | null
+          id?: string
+          is_active?: boolean
+          role: string
+          seller_id: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          custom_role_id?: string | null
+          id?: string
+          is_active?: boolean
+          role?: string
+          seller_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_members_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_members_custom_role_id_fkey"
+            columns: ["custom_role_id"]
+            isOneToOne: false
+            referencedRelation: "custom_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buyers: {
         Row: {
           created_at: string

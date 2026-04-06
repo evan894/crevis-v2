@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { hasPermission, type Role, type Permission } from '@/lib/permissions'
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -31,39 +32,110 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
-  const isAuthPage = pathname.startsWith('/auth')
-  const isDashboard = pathname.startsWith('/dashboard')
-  const isOnboarding = pathname.startsWith('/onboarding')
-  const isProducts = pathname.startsWith('/products')
-  const isWallet = pathname.startsWith('/wallet')
-  
-  const isProtectedRoute = isDashboard || isOnboarding || isProducts || isWallet
 
-  // Restrict protected routes
-  if (!user && isProtectedRoute) {
+  // Always allow API routes, static files, auth callback
+  if (
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/auth/callback') ||
+    pathname.startsWith('/appeal/')
+  ) {
+    return response
+  }
+
+  // Unauthenticated users — block all app routes
+  const isPublicRoute = pathname.startsWith('/auth')
+  if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL('/auth', request.url))
   }
 
-  // Restrict auth page if logged in
-  if (user && isAuthPage) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  if (!user) {
+    return response
   }
-  
-  if (user && isOnboarding) {
-    // Determine if seller record exists
-    const { data: seller } = await supabase.from('sellers').select('id').eq('user_id', user.id).single()
-    if (seller) {
-      // Allow Step 2 or 3 of onboarding explicitly?
-      // "Route guard: /onboarding redirects to /dashboard if seller record already exists"
-      // Wait, if they are mid-onboarding (Step 2 or 3), they shouldn't be redirected away yet
-      // We will rely on app/onboarding/page.tsx handling the multi-step states with query params to avoid Edge database overhead here, 
-      // but if there are edge cases, middleware blocks access completely to /onboarding root if no step.
-      // Easiest is just ensuring they can hit dashboard.
-      const step = request.nextUrl.searchParams.get('step');
-      if (!step) {
-         // They went to /onboarding directly but already have a record
-         return NextResponse.redirect(new URL('/dashboard', request.url))
+
+  // --- Authenticated user ---
+
+  const isPlatformAdmin = user.email === process.env.ADMIN_EMAIL
+
+  // Fetch role + custom permissions from store_members (uses RLS: member_read_own)
+  let memberRole: string | null = null
+  let customPermissions: Permission[] | undefined = undefined
+
+  if (!isPlatformAdmin) {
+    const { data: member } = await supabase
+      .from('store_members')
+      .select(`
+        role,
+        custom_roles ( permissions )
+      `)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+
+    memberRole = member?.role ?? null
+
+    if (memberRole === 'custom') {
+      const cr = member?.custom_roles as unknown as { permissions: Permission[] } | null
+      customPermissions = cr?.permissions ?? []
+    }
+  }
+
+  const getRoleHome = (): string => {
+    if (isPlatformAdmin) return '/dashboard'
+    if (memberRole === 'delivery_agent') return '/delivery'
+    if (memberRole === 'sales_agent') return '/agent'
+    return '/dashboard'
+  }
+
+  // Logged-in user on /auth → their role home
+  if (pathname.startsWith('/auth')) {
+    return NextResponse.redirect(new URL(getRoleHome(), request.url))
+  }
+
+  // No store membership yet → allow /onboarding only
+  if (!isPlatformAdmin && !memberRole) {
+    if (!pathname.startsWith('/onboarding')) {
+      return NextResponse.redirect(new URL('/onboarding', request.url))
+    }
+    return response
+  }
+
+  // User with membership on /onboarding → role home (unless mid-step)
+  if (pathname.startsWith('/onboarding')) {
+    const step = request.nextUrl.searchParams.get('step')
+    if (!step) {
+      return NextResponse.redirect(new URL(getRoleHome(), request.url))
+    }
+    return response
+  }
+
+  // Platform admin bypasses all role checks
+  if (isPlatformAdmin) return response
+
+  const role = memberRole as Role
+
+  // /admin/* — platform admin only; redirect everyone else
+  if (pathname.startsWith('/admin')) {
+    return NextResponse.redirect(new URL(getRoleHome(), request.url))
+  }
+
+  // Route → required permission map
+  const routeChecks: Array<[string, Permission]> = [
+    ['/dashboard', 'view_dashboard'],
+    ['/products', 'manage_products'],
+    ['/wallet', 'purchase_credits'],
+    ['/team', 'manage_team'],
+    ['/settings', 'manage_settings'],
+    ['/orders', 'view_orders'],
+    ['/agent', 'pack_orders'],
+    ['/delivery', 'update_delivery'],
+  ]
+
+  for (const [prefix, permission] of routeChecks) {
+    if (pathname.startsWith(prefix)) {
+      if (!hasPermission(role, permission, customPermissions)) {
+        return NextResponse.redirect(new URL(getRoleHome(), request.url))
       }
+      break
     }
   }
 
