@@ -550,3 +550,39 @@ These must never be revisited without a strong reason.
 - Vercel: Deploying b23a097 → crevis-v2.vercel.app
 - `/auth` page should now load fully without blank screen
 ---
+### Session R2 — April 6, 2026
+
+**Status:** ✅ Completed
+
+**What was built:**
+- `app/(app)/team/page.tsx` — Full team management page with owner-only gate, members table with avatar initials, role change dropdown, remove-member confirmation modal, slide-in Add Member panel (lookup by email, Slack DM notification on add), and Custom Role Builder with per-permission toggle grid.
+- `app/(admin)/admin/stores/page.tsx` — Admin workspace with left store-list sidebar (search-enabled), right detail panel with 5 tabs (Products/Orders/Team/Credits/Stats), product removal with mandatory reason, and token-gate login screen.
+- `app/(admin)/layout.tsx` — Admin group layout.
+- API routes created:
+  - `GET/POST /api/team/members` — list & add members
+  - `PATCH/DELETE /api/team/members/[id]` — role change & soft-remove
+  - `GET/POST /api/team/custom-roles` — list & create custom roles
+  - `PATCH/DELETE /api/team/custom-roles/[id]` — edit & delete (with assignment guard)
+  - `GET /api/admin/stores` — all stores enriched with product/order counts
+  - `DELETE /api/admin/products/[id]` — admin product removal with reason
+  - `GET /api/admin/stores/[id]/products|orders|members|ledger` — store detail tabs
+- Added "Team" nav item to `(app)/layout.tsx` sidebar and mobile nav.
+
+**Bugs fixed:**
+- Cleaned unused `STANDARD_ROLES` const causing ESLint error in team page.
+
+**Decisions made:**
+- Admin authentication via `x-admin-token` header + env var `ADMIN_SECRET_TOKEN` (not Supabase auth — admin is platform-level, not seller-level).
+- Member removal is a soft-delete (`is_active = false`), preserving historical records.
+- Custom role deletion blocked if any active member is assigned to it.
+- Owner role cannot be changed or removed via the UI (enforced in API).
+
+**Next session starts at:**
+[ ] Session R3 or as directed by user.
+
+**Environment state:**
+- Supabase: Active, `store_members` and `custom_roles` tables live
+- Vercel: ✅ Deployed at crevis-v2.vercel.app (commit 1d1510b)
+- Admin workspace: https://crevis-v2.vercel.app/admin/stores
+- Team page: https://crevis-v2.vercel.app/team
+---
