@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, PackageOpen, ShoppingBag, Wallet, Settings } from "lucide-react";
+import { LayoutDashboard, PackageOpen, ShoppingBag, Wallet, Settings, Users } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -11,6 +11,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Products", href: "/products", icon: PackageOpen },
     { name: "Orders", href: "/orders", icon: ShoppingBag },
+    { name: "Team", href: "/team", icon: Users },
     { name: "Wallet", href: "/wallet", icon: Wallet },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
