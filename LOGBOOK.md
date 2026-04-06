@@ -78,10 +78,10 @@
 
 ---
 
-## Pending manual steps (owner action required)
+## Manual steps completed (2026-04-06)
 
-1. **Supabase Dashboard** → Run SQL from `supabase/migrations/0008_add_stock_and_photo_urls.sql` (if not done)
-2. **Supabase Dashboard** → Run SQL from `supabase/migrations/0009_multi_role_system.sql`
-2. **Supabase Dashboard** → Authentication → URL Configuration → set Site URL + Redirect URLs
-3. **Slack app settings** → Remove localhost redirect URL, confirm production URL only
-4. **Vercel Dashboard** → Confirm `NEXT_PUBLIC_APP_URL=https://crevis-v2.vercel.app` is set for Preview too (currently Production-only)
+- ✅ Supabase: migration `0008_add_stock_and_photo_urls.sql` applied
+- ✅ Supabase: migration `0009_multi_role_system.sql` applied
+- ✅ Supabase: Authentication URL Configuration — Site URL + Redirect URLs set to `https://crevis-v2.vercel.app`
+- ✅ Slack app: localhost redirect URL removed, production URL confirmed
+- ✅ Vercel: `NEXT_PUBLIC_APP_URL` confirmed for all environments
