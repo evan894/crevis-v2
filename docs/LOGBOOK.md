@@ -586,3 +586,37 @@ These must never be revisited without a strong reason.
 - Admin workspace: https://crevis-v2.vercel.app/admin/stores
 - Team page: https://crevis-v2.vercel.app/team
 ---
+### Session R3 — April 6, 2026
+
+**Status:** ✅ Completed
+
+**What was built:**
+- `app/(agent)/agent/page.tsx` — Mobile-first sales agent dashboard with:
+  - Sticky top bar: store name, role badge (owner/manager/sales_agent), sign out
+  - 3-stat row: New Orders / Packing / Ready (saffron highlight when > 0)
+  - Segmented tab bar with live counts
+  - Order cards with 60×60 product photo, buyer name, relative timestamp, saffron price
+  - "Start Packing" button → moves to Packing tab (optimistic update)
+  - "Mark as Packed" button → generates 6-digit OTP, sends to buyer on Telegram, notifies seller on Slack
+  - "Out of Stock" secondary button → bottom-sheet confirmation modal → marks order failed, notifies buyer + seller
+  - Ready tab shows "OTP sent to buyer ✓" confirmation badge
+  - Access denied screen for unauthorised roles
+- `app/(agent)/layout.tsx` — No-sidebar shell for agent group
+- `app/api/agent/orders/route.ts` — GET: resolves seller via store_members, returns orders with delivery join, role-gated
+- `app/api/agent/orders/[id]/action/route.ts` — POST: handles start_packing / mark_packed (OTP gen + Telegram + Slack) / out_of_stock (Telegram + Slack + product deactivate)
+
+**Architecture decisions:**
+- Agent resolves their seller_id via `store_members`, not `sellers` — agents are members, not sellers
+- OTP is 6 digits, stored in `delivery_orders.otp`, sent only to buyer's Telegram chat_id
+- `delivery_orders.upsert` used for start_packing so the row is created on first action
+- Out-of-stock deactivates the product (`active = false`) rather than setting stock = 0 (stock column may not exist in all environments)
+- Optimistic UI updates applied immediately; background fetch reconciles on next refresh
+
+**Next session starts at:**
+[ ] Session R4 or as directed by user.
+
+**Environment state:**
+- Vercel: ✅ Deployed at crevis-v2.vercel.app (commit e0bc24d)
+- Agent dashboard URL: https://crevis-v2.vercel.app/agent
+- `delivery_orders` table: active and wired end-to-end
+---
