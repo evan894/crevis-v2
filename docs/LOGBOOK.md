@@ -433,6 +433,18 @@ Inserted above the stats grid in `dashboard/page.tsx`:
 
 ---
 
+### Session 11.2.1 — Bank Account Management
+**Completed:** Yes
+**Steps Taken:**
+1. Created and applied migration `0015_seller_bank_accounts.sql` — table with RLS (owner-only).
+2. Updated `types/database.types.ts` with `seller_bank_accounts` Row/Insert/Update types.
+3. Added "Payout Account" section in `app/(app)/settings/page.tsx` — owner-only, with bank form modal, IFSC live-lookup from `ifsc.razorpay.com`, account number masking + confirmation, account type selector.
+4. Created `app/api/bank/verify/route.ts` — Razorpay Fund Account API: creates contact → fund account → penny drop validation. Marks `verified = true` on success. Sends Slack DM to seller.
+5. Created `app/(app)/billing/page.tsx` — read-only financial summary for all roles (credit breakdown, bank account status, order earnings timeline, 30-day ledger).
+6. Added **Billing** nav item to sidebar in `app/(app)/layout.tsx`.
+
+---
+
 ### Session 11.1.1 — 2-Day Return Window
 **Completed:** Yes
 **Steps Taken:**
