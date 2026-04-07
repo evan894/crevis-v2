@@ -66,6 +66,41 @@ export async function POST(req: Request) {
            credits_deducted: fee
        }).eq('id', order.id);
 
+       // 1a. Deduct stock and check auto-unlist
+       if (order.product_id) {
+           const { data: product } = await supabase.from('products').select('*').eq('id', order.product_id).single();
+           if (product) {
+               let updatedStock = product.stock;
+               let updatedVariants = product.variants;
+               
+               interface VariantOption { label: string; stock: number }
+
+               if (product.has_variants && product.variants && order.selected_variant) {
+                   // safely cast knowing the structure
+                   const productVariants = product.variants as unknown as { type: string; options: VariantOption[] };
+                   const options = productVariants.options;
+                   const targetOption = options.find((o) => o.label === order.selected_variant);
+                   if (targetOption && targetOption.stock > 0) {
+                       targetOption.stock -= 1;
+                   }
+                   updatedStock = options.reduce((sum, opt) => sum + opt.stock, 0);
+                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                   updatedVariants = { type: 'size', options } as unknown as any;
+               } else if (!product.has_variants) {
+                   updatedStock = Math.max(0, product.stock - 1);
+               }
+
+               // Set active to false if stock hits 0
+               const active = updatedStock > 0 ? product.active : false;
+               
+               await supabase.from('products').update({ 
+                   stock: updatedStock, 
+                   variants: updatedVariants,
+                   active 
+               }).eq('id', order.product_id);
+           }
+       }
+
        // 1b. Auto-create delivery_orders record (pending) if not already present
        await supabase.from('delivery_orders').upsert(
            { order_id: order.id, status: 'pending' },

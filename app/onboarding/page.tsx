@@ -19,6 +19,7 @@ function OnboardingContent() {
 
   const [shopName, setShopName] = useState("");
   const [category, setCategory] = useState("Clothing");
+  const [unlistDurationDays, setUnlistDurationDays] = useState(7);
 
   const [couponCode, setCouponCode] = useState("");
   const [redeemSuccess, setRedeemSuccess] = useState(false);
@@ -63,6 +64,7 @@ function OnboardingContent() {
         user_id: userId,
         shop_name: shopName,
         category: category,
+        unlist_duration_days: unlistDurationDays,
       }).select("id").single();
       if (dbError) throw dbError;
 
@@ -175,6 +177,32 @@ function OnboardingContent() {
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
+              </div>
+
+              <div className="space-y-2 mt-4 bg-surface rounded-md p-3 border border-border">
+                 <label className="text-xs font-dm-sans font-medium text-ink-secondary ml-1">Auto-delete unlisted products after:</label>
+                 <div className="flex flex-col gap-2 mt-2">
+                    {[
+                      { value: 3, label: "3 days" },
+                      { value: 7, label: "7 days (default)" },
+                      { value: 14, label: "14 days" },
+                      { value: 30, label: "30 days" },
+                      { value: 0, label: "Never auto-delete" }
+                    ].map((opt) => (
+                       <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name="unlistDuration" 
+                            value={opt.value}
+                            checked={unlistDurationDays === opt.value}
+                            onChange={() => setUnlistDurationDays(opt.value)}
+                            disabled={loading}
+                            className="w-4 h-4 text-saffron focus:ring-saffron border-border"
+                          />
+                          <span className="text-sm font-dm-sans text-ink">{opt.label}</span>
+                       </label>
+                    ))}
+                 </div>
               </div>
 
               <button

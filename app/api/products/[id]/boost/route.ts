@@ -5,7 +5,7 @@ import { deductCredits, deactivateSellerListings } from "@/lib/credits";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { sendSlackDM } from "@/lib/slack";
 import type { Database } from "@/types/database.types";
-import { CREDIT_COST_BOOST, LOW_CREDIT_THRESHOLD, SLACK_MESSAGES } from "@/lib/constants";
+import { CREDIT_COST_BOOST, LOW_CREDIT_THRESHOLD, CREDIT_LOW_THRESHOLD, SLACK_MESSAGES } from "@/lib/constants";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -23,8 +23,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { data: seller } = await supabase.from("sellers").select("id, slack_access_token, slack_user_id").eq("user_id", user.id).single();
+    const { data: seller } = await supabase.from("sellers").select("id, slack_access_token, slack_user_id, credit_balance").eq("user_id", user.id).single();
     if (!seller) return NextResponse.json({ error: "Seller profile not found" }, { status: 404 });
+
+    if (seller.credit_balance < CREDIT_LOW_THRESHOLD) {
+       return NextResponse.json({ 
+         error: "Your balance is below 50 credits. Top up to boost products."
+       }, { status: 400 });
+    }
 
     const { data: product } = await supabaseAdmin.from("products").select("id, seller_id, boosted").eq("id", params.id).single();
     

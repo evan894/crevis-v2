@@ -10,7 +10,7 @@ const supabase = createClient<Database>(
 
 export async function POST(request: Request) {
   try {
-    const { productId, buyerTelegramId } = await request.json();
+    const { productId, buyerTelegramId, variant } = await request.json();
 
     if (!productId || !buyerTelegramId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -65,7 +65,8 @@ export async function POST(request: Request) {
         notes: {
             product_id: product.id,
             buyer_telegram_id: buyerTelegramId,
-            seller_id: sellerId
+            seller_id: sellerId,
+            ...(variant && { variant })
         }
     };
 
@@ -84,6 +85,7 @@ export async function POST(request: Request) {
           razorpay_payment_id: paymentLink.id, // Store payment link ID 
           platform_fee: 0,
           credits_deducted: 0,
+          selected_variant: variant || null,
           // Note: actual transaction ID will be populated when paid
        });
        

@@ -94,7 +94,8 @@ export default function DashboardPage() {
      totalOrders: 0,
      creditBalance: 0,
      activeListings: 0,
-     totalEarnings: 0
+     totalEarnings: 0,
+     gracePeriodStartedAt: null as string | null
   });
 
   const [orders, setOrders] = useState<OrderRow[]>([]);
@@ -187,7 +188,7 @@ export default function DashboardPage() {
 
        const { data: seller } = await supabase
          .from("sellers")
-         .select("id, shop_name, shop_slug, credit_balance, slack_user_id, qr_code_url")
+         .select("id, shop_name, shop_slug, credit_balance, slack_user_id, qr_code_url, grace_period_started_at")
          .eq("user_id", user.id)
          .single();
        if (!seller) return;
@@ -228,10 +229,11 @@ export default function DashboardPage() {
           totalOrders: tOrders,
           creditBalance: seller.credit_balance,
           activeListings: activeListings || 0,
-          totalEarnings: tEarnings
+          totalEarnings: tEarnings,
+          gracePeriodStartedAt: seller.grace_period_started_at
        });
 
-       if (seller.credit_balance < 20) {
+       if (seller.credit_balance < 50) {
           const dismissed = sessionStorage.getItem("crevis_credit_warning_dismissed");
           if (!dismissed) setShowCreditWarning(true);
        }
@@ -335,14 +337,36 @@ export default function DashboardPage() {
     <div className="min-h-full pb-24 md:pb-12 bg-surface selection:bg-saffron selection:text-surface-raised">
 
       {/* Low Credit Warning Banner */}
-      {showCreditWarning && (
+      {showCreditWarning && stats.creditBalance >= 0 && (
          <div className="bg-warning-bg border-b border-warning/20 px-6 py-3 flex items-center justify-between text-warning-content animate-in slide-in-from-top-5">
             <div className="flex items-center gap-3">
                <AlertTriangle className="w-5 h-5 text-warning" />
-               <p className="text-sm font-medium">Low balance: You have <strong>{stats.creditBalance}</strong> credits remaining. Operations may halt soon.</p>
+               <p className="text-sm font-medium">⚠️ Your balance is below 50 credits. You cannot list new products or boost listings. Your current listings are still active.</p>
             </div>
-            <div className="flex items-center gap-4">
-               <Link href="/wallet" className="text-sm font-bold text-warning underline hover:opacity-80">Recharge now</Link>
+            <div className="flex items-center gap-4 shrink-0">
+               <Link href="/wallet" className="text-sm font-bold text-warning underline hover:opacity-80">Top Up Now &rarr;</Link>
+               <button onClick={dismissWarning} className="opacity-70 hover:opacity-100 transition-opacity">
+                  <X className="w-4 h-4" />
+               </button>
+            </div>
+         </div>
+      )}
+
+      {/* Negative Balance Banner */}
+      {showCreditWarning && stats.creditBalance < 0 && (
+         <div className="bg-error-bg border-b border-error/20 px-6 py-3 flex items-center justify-between text-error animate-in slide-in-from-top-5">
+            <div className="flex items-center gap-3">
+               <AlertTriangle className="w-5 h-5 text-error" />
+               <p className="text-sm font-medium">
+                 ❌ Your balance is negative. You have {
+                   stats.gracePeriodStartedAt 
+                   ? Math.max(0, 6 - Math.floor((Date.now() - new Date(stats.gracePeriodStartedAt).getTime()) / 86400000))
+                   : 6
+                 } days to settle dues.
+               </p>
+            </div>
+            <div className="flex items-center gap-4 shrink-0">
+               <Link href="/wallet" className="text-sm font-bold text-error underline hover:opacity-80">Top Up Now &rarr;</Link>
                <button onClick={dismissWarning} className="opacity-70 hover:opacity-100 transition-opacity">
                   <X className="w-4 h-4" />
                </button>

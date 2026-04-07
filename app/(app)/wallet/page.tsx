@@ -17,7 +17,7 @@ type LedgerEntry = {
   created_at: string;
 };
 
-import { CREDIT_PACKAGES } from "@/lib/constants";
+import { CREDIT_PACKAGES, CREDIT_LOW_THRESHOLD } from "@/lib/constants";
 
 export default function WalletPage() {
 
@@ -189,6 +189,18 @@ export default function WalletPage() {
               <p className="font-jetbrains-mono font-bold text-[34px] text-credit tracking-tight mb-4">
                  {balance ?? 0} <span className="text-sm tracking-normal text-ink-muted">CC</span>
               </p>
+              
+              {balance !== null && (
+                <div className={`mt-1 mb-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                   balance < 0 ? 'bg-error-bg text-error border-error/20' : 
+                   balance < CREDIT_LOW_THRESHOLD ? 'bg-warning-bg text-warning-content border-warning/20' : 
+                   'bg-success-bg text-success border-success/20'
+                }`}>
+                   {balance < 0 ? '❌ Store Paused (Negative Balance)' : 
+                    balance < CREDIT_LOW_THRESHOLD ? '⚠️ Limited Mode (Top up to List/Boost)' : 
+                    '✅ Store Fully Active'}
+                </div>
+              )}
               
               <div className="w-full flex sm:flex-row flex-col justify-center gap-8 mt-2 pt-6 border-t border-border">
                 <div className="flex flex-col items-center">

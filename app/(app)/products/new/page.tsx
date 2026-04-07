@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase";
-import { Loader2, Image as ImageIcon, Wallet, RefreshCcw, X } from "lucide-react";
+import { Loader2, Image as ImageIcon, Wallet, RefreshCcw, X, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { CATEGORIES, CREDIT_COST_LISTING } from "@/lib/constants";
 import Image from "next/image";
@@ -27,6 +27,23 @@ export default function NewProductPage() {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("1");
   const [category, setCategory] = useState("Clothing");
+
+  const [hasVariants, setHasVariants] = useState(false);
+  const [variants, setVariants] = useState<{label: string, stock: number}[]>([]);
+
+  useEffect(() => {
+    if (hasVariants && variants.length === 0) {
+      if (category === "Clothing") {
+        setVariants(["XS", "S", "M", "L", "XL", "XXL"].map(label => ({ label, stock: 0 })));
+      } else if (category === "Footwear") {
+        setVariants(["5", "6", "7", "8", "9", "10", "11"].map(label => ({ label, stock: 0 })));
+      } else {
+        setVariants([{ label: "One Size", stock: 0 }]);
+      }
+    }
+  }, [hasVariants, category, variants.length]);
+
+  const totalVariantStock = variants.reduce((sum, v) => sum + v.stock, 0);
 
   useEffect(() => {
     const fetchBalance = async () => {
@@ -76,7 +93,15 @@ export default function NewProductPage() {
     if (files.length === 0) return toast.error("At least one product image is required");
     if (!name.trim()) return toast.error("Product name is required");
     if (!price || isNaN(Number(price)) || Number(price) <= 0) return toast.error("Valid price is required");
-    if (!stock || isNaN(Number(stock)) || Number(stock) < 1) return toast.error("Stock must be at least 1");
+    
+    if (hasVariants) {
+      if (variants.length === 0) return toast.error("Please add at least one variant");
+      if (variants.some(v => !v.label.trim())) return toast.error("All variants must have a label");
+      if (totalVariantStock < 1) return toast.error("Total variant stock must be at least 1");
+    } else {
+      if (!stock || isNaN(Number(stock)) || Number(stock) < 1) return toast.error("Stock must be at least 1");
+    }
+
     if (creditBalance < CREDIT_COST_LISTING) return toast.error("Insufficient credits. Please recharge your wallet.");
 
     setLoading(true);
@@ -108,9 +133,11 @@ export default function NewProductPage() {
           description,
           price: Number(price),
           category,
-          stock: Number(stock),
+          stock: hasVariants ? totalVariantStock : Number(stock),
           photo_url: coverPhoto,
           photo_urls: uploadedUrls,
+          has_variants: hasVariants,
+          variants: hasVariants ? { type: "size", options: variants.filter(v => v.stock > 0 || v.label) } : null,
         })
       });
 
@@ -253,31 +280,98 @@ export default function NewProductPage() {
                </div>
 
                <div className="space-y-1">
-                 <label className="text-xs font-medium text-ink-secondary ml-1">Stock quantity <span className="text-error">*</span></label>
-                 <input
-                   type="number"
-                   min="1"
-                   value={stock}
-                   onChange={(e) => setStock(e.target.value)}
+                 <label className="text-xs font-medium text-ink-secondary ml-1">Category <span className="text-error">*</span></label>
+                 <select
+                   value={category}
+                   onChange={(e) => {
+                     setCategory(e.target.value);
+                     if (hasVariants) setVariants([]); // Reset variations when category changes
+                   }}
                    disabled={loading}
-                   className="w-full h-[44px] px-3 bg-surface border border-border rounded-md font-jetbrains-mono text-base text-ink focus:border-saffron focus:ring-1 focus:ring-saffron outline-none transition-all duration-fast"
-                   placeholder="1"
-                 />
+                   className="w-full h-[44px] px-3 bg-surface border border-border rounded-md text-base text-ink focus:border-saffron focus:ring-1 focus:ring-saffron outline-none transition-all duration-fast appearance-none"
+                 >
+                   {CATEGORIES.map(cat => (
+                     <option key={cat} value={cat}>{cat}</option>
+                   ))}
+                 </select>
                </div>
-             </div>
 
-             <div className="space-y-1">
-               <label className="text-xs font-medium text-ink-secondary ml-1">Category <span className="text-error">*</span></label>
-               <select
-                 value={category}
-                 onChange={(e) => setCategory(e.target.value)}
-                 disabled={loading}
-                 className="w-full h-[44px] px-3 bg-surface border border-border rounded-md text-base text-ink focus:border-saffron focus:ring-1 focus:ring-saffron outline-none transition-all duration-fast appearance-none"
-               >
-                 {CATEGORIES.map(cat => (
-                   <option key={cat} value={cat}>{cat}</option>
-                 ))}
-               </select>
+               {/* Variant Toggle */}
+               <div className="pt-2 border-t border-border">
+                 <label className="flex items-center gap-3 cursor-pointer group">
+                   <div className="relative inline-flex items-center cursor-pointer">
+                     <input type="checkbox" className="sr-only peer" checked={hasVariants} onChange={(e) => setHasVariants(e.target.checked)} disabled={loading} />
+                     <div className="w-11 h-6 bg-surface border border-border peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-saffron rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-ink-muted peer-checked:after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-saffron peer-checked:border-saffron"></div>
+                   </div>
+                   <span className="text-sm font-medium text-ink group-hover:text-saffron transition-colors">This product has size variants</span>
+                 </label>
+               </div>
+
+               {/* Stock Input (Conditionally rendered) */}
+               {!hasVariants ? (
+                 <div className="space-y-1">
+                   <label className="text-xs font-medium text-ink-secondary ml-1">Stock quantity <span className="text-error">*</span></label>
+                   <input
+                     type="number"
+                     min="1"
+                     value={stock}
+                     onChange={(e) => setStock(e.target.value)}
+                     disabled={loading}
+                     className="w-full h-[44px] px-3 bg-surface border border-border rounded-md font-jetbrains-mono text-base text-ink focus:border-saffron focus:ring-1 focus:ring-saffron outline-none transition-all duration-fast"
+                     placeholder="1"
+                   />
+                 </div>
+               ) : (
+                 <div className="space-y-3 p-4 bg-surface rounded-lg border border-border">
+                   <div className="flex items-center justify-between mb-2">
+                     <label className="text-xs font-medium text-ink-secondary">Size Variants</label>
+                     <span className="text-xs font-medium text-ink bg-surface-raised px-2 py-1 rounded">Total stock: <strong className="font-jetbrains-mono">{totalVariantStock}</strong></span>
+                   </div>
+                   <div className="space-y-2">
+                     {variants.map((v, i) => (
+                       <div key={i} className="flex items-center gap-2">
+                         <input 
+                           type="text" 
+                           value={v.label}
+                           onChange={(e) => {
+                             const updated = [...variants];
+                             updated[i].label = e.target.value;
+                             setVariants(updated);
+                           }}
+                           className="flex-1 h-[40px] px-3 bg-surface-raised border border-border rounded-md font-jetbrains-mono text-sm uppercase text-ink focus:border-saffron focus:ring-1 outline-none"
+                           placeholder="Size"
+                         />
+                         <input 
+                           type="number" 
+                           min="0"
+                           value={v.stock}
+                           onChange={(e) => {
+                             const updated = [...variants];
+                             updated[i].stock = parseInt(e.target.value) || 0;
+                             setVariants(updated);
+                           }}
+                           className="w-24 h-[40px] px-3 bg-surface-raised border border-border rounded-md font-jetbrains-mono text-sm text-ink focus:border-saffron focus:ring-1 outline-none"
+                           placeholder="Stock"
+                         />
+                         <button 
+                           type="button" 
+                           onClick={() => setVariants(variants.filter((_, idx) => idx !== i))}
+                           className="p-2 text-ink-muted hover:text-error hover:bg-error-bg rounded-md transition-colors"
+                         >
+                           <Trash2 className="w-4 h-4" />
+                         </button>
+                       </div>
+                     ))}
+                   </div>
+                   <button 
+                     type="button"
+                     onClick={() => setVariants([...variants, {label: '', stock: 0}])}
+                     className="mt-2 flex items-center text-sm text-saffron font-medium hover:text-saffron-dark transition-colors"
+                   >
+                     <Plus className="w-4 h-4 mr-1" /> Add custom size
+                   </button>
+                 </div>
+               )}
              </div>
 
              <div className="space-y-1">

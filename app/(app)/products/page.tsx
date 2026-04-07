@@ -18,6 +18,7 @@ type Product = {
   boosted: boolean;
   category: string;
   stock: number;
+  scheduled_delete_at: string | null;
 };
 
 type FilterMode = "All" | "Active" | "Inactive" | "Boosted";
@@ -126,6 +127,14 @@ export default function ProductsPage() {
     return true;
   });
 
+  const getInactiveStatus = (scheduledDeleteAt: string | null) => {
+    if (!scheduledDeleteAt) return "Inactive";
+    const days = Math.ceil((new Date(scheduledDeleteAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (days < 0) return "Deleting soon";
+    if (days === 0) return "Deleting today";
+    return `Auto-deletes in ${days}d`;
+  };
+
   return (
     <div className="min-h-screen bg-surface selection:bg-saffron selection:text-surface-raised font-dm-sans">
       
@@ -220,7 +229,7 @@ export default function ProductsPage() {
                       </span>
                     ) : (
                       <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-surface/90 backdrop-blur-sm text-ink-secondary rounded-md shadow-sm">
-                        Inactive
+                        {getInactiveStatus(product.scheduled_delete_at)}
                       </span>
                     )}
                   </div>

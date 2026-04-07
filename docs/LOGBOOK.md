@@ -332,3 +332,101 @@ Inserted above the stats grid in `dashboard/page.tsx`:
 **Environment status:**
 - Full TS typing verifications and production build confirmed passing cleanly.
 - Commits pushed out and Vercel preview environments automatically deploying in the background.
+
+---
+
+### Session 10.1.1 — Customizable Unlist Duration
+**Completed:** Yes
+**Steps Taken:**
+1. Created `0012_customizable_unlist.sql` with migrations for `sellers.unlist_duration_days`, `products.unlisted_at`, and `products.scheduled_delete_at`, plus a DB trigger.
+2. Updated `types/database.types.ts` manually to reflect these new schema changes.
+3. Updated `app/(app)/settings/page.tsx` and `app/onboarding/page.tsx` to add "Auto-delete unlisted products after" settings.
+4. Added visual "Auto-deletes in X days" computation to inactive product cards in `app/(app)/products/page.tsx`.
+5. Created a new Vercel Cron route at `app/api/cron/cleanup-products/route.ts` to execute automated product hard-deletes and notify sellers via Slack, alongside configuration in `vercel.json`.
+
+---
+
+### Session 9.1.1 — April 7, 2026 — Dual Credit Types
+
+**Status:** ✅ Completed
+
+**What was built:**
+
+**Step 1 — Database schema changes**
+- Modified the `sellers` table to add `earned_credits` and `promo_credits` integer columns. Initialized all current balances strictly as promotional.
+- Extended the `credit_ledger` schema with a constrained `credit_type` parameter indicating row context (promotional vs earned).
+
+**Step 2 & 3 — Core Accounting RPCs**
+- Rescripted `add_credits` to accept and process discrete designations.
+- Rewrote `deduct_credits` logic to act universally but drain promotional resources sequentially before tapping into earned balances, updating the credit pool linearly. 
+
+**Step 4 — Navigational Tracking & Wallets**
+- Refactored `app/(app)/wallet/page.tsx` UI components to show separated available balances.
+- Added explicit visual tags distinguishing the credit origin (`promo` vs `earned`) inside the main transaction list table.
+- Upgraded TS types inside `database.types.ts` manually enforcing accurate system mapping. 
+
+**Environment state:**
+- Vercel: ✅ Pushed & Deployment automatically initialized.
+- Typecheck & Build: ✅ 0 errors cleanly executed.
+
+---
+
+### Session 9.1.2 — April 7, 2026 — Grace Period + Auto-Deactivation
+
+**Status:** ✅ Completed
+
+**What was built:**
+
+**Step 1 — Grace Period Trigger Logic**
+- Applied database migrations to add `grace_period_started_at`, `deactivated`, `deactivated_at`, and `deactivated_snapshot` columns to `sellers`.
+- Updated `deduct_credits` RPC to begin tracking grace periods unconditionally upon balance crossing below 0.
+- Updated `add_credits` RPC to wipe tracking data when an account is sufficiently refilled (balance >= 0).
+
+**Step 2 — Vercel Cron Job Automation**
+- Setup `app/api/cron/grace-period/route.ts` running sequentially every day.
+- Implemented logic iterating through active grace periods and matching the elapsed days against bounds (3 days and 5 days) using simple TS logic.
+- Routed standard timeline alerts via DM securely targeting their respective Telegram/Slack connections.
+- Programmed day-6 action to batch update listed products status to `active=false`, and save product list IDs payload to `deactivated_snapshot` before finally mutating `sellers.deactivated` to true. 
+- Sent automated ping over to Crevis Admins containing restoration panel links.
+
+**Step 3 — Admin Controls & Restoration Logic**
+- Added sorting controls over `app/(admin)/admin/stores/page.tsx` UI routing separating and rendering stores conditionally matching `deactivated=true`. 
+- Added an "Undo Deactivation" UI entry component exclusively within paused store panels.
+- Wrote API implementation targeting `[id]/restore` executing snapshot reinstatements, toggling off all related suspended configurations, and forcibly resetting operational balances to a net-zero baseline utilizing standard RPC channels natively.
+
+**Environment state:**
+- Vercel: ✅ Handled route updates (resolved naming collision)
+- Core Types: ✅ Strong typing maintained in DB integrations.
+- Build Process: ✅ Succeeded gracefully.
+
+---
+
+### Session 9.2.1 — April 7, 2026 — 50 Credit Threshold
+
+**Status:** ✅ Completed
+
+**What was built:**
+
+**Step 1 — Updated Constants**
+- Added `CREDIT_LOW_THRESHOLD = 50` in `lib/constants.ts`.
+
+**Step 2 & 3 — Blocking Operations at < 50 Credits**
+- Modified `app/api/products/create/route.ts` to block new product listings when balance is under 50. Added an explicit user-friendly error message indicating that existing listings stay active.
+- Modified `app/api/products/[id]/boost/route.ts` to retrieve `credit_balance` and block promotional boosts when balance is under 50.
+
+**Step 4 — Dashboard Warning Banner**
+- Updated `app/(app)/dashboard/page.tsx` state to fetch `grace_period_started_at`.
+- Extended the UI logic to render layered warning banners based on threshold constraints:
+  - `< 50 && >= 0`: ⚠️ "Your balance is below 50 credits... " indicating limited mode.
+  - `< 0`: ❌ "Your balance is negative. You have X days to settle dues."
+
+**Step 5 — Wallet Listing Status Indicator**
+- In `app/(app)/wallet/page.tsx`, placed a clear visual pill directly inside the Balance Hero Card.
+- It dynamically flags the actual state of the account operations as:
+  - ✅ Store Fully Active
+  - ⚠️ Limited Mode (Top up to List/Boost)
+  - ❌ Store Paused (Negative Balance)
+
+**Environment state:**
+- Vercel: ✅ Pushed & Deployed
+- Typecheck & Build: ✅ Built cleanly.

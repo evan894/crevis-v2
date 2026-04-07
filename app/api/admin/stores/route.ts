@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     // Fetch all sellers with product counts and order stats
     const { data: sellers, error } = await supabaseAdmin
       .from("sellers")
-      .select("id, shop_name, category, credit_balance, created_at, user_id")
+      .select("id, shop_name, category, credit_balance, created_at, user_id, deactivated, deactivated_at")
       .order("created_at", { ascending: false });
 
     if (error) throw error;

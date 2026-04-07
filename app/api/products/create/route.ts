@@ -4,12 +4,12 @@ import { cookies } from "next/headers";
 import { deductCredits, deactivateSellerListings } from "@/lib/credits";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { Database } from "@/types/database.types";
-import { CREDIT_COST_LISTING } from "@/lib/constants";
+import { CREDIT_COST_LISTING, CREDIT_LOW_THRESHOLD } from "@/lib/constants";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, description, price, category, photo_url, photo_urls, stock } = body;
+    const { name, description, price, category, photo_url, photo_urls, stock, has_variants, variants } = body;
 
     if (!name || !price || !category || !photo_url) {
        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -32,8 +32,10 @@ export async function POST(request: Request) {
     const { data: seller } = await supabase.from("sellers").select("id, credit_balance").eq("user_id", user.id).single();
     if (!seller) return NextResponse.json({ error: "Seller profile not found" }, { status: 404 });
 
-    if (seller.credit_balance < CREDIT_COST_LISTING) {
-       return NextResponse.json({ error: "Insufficient credits to list product" }, { status: 400 });
+    if (seller.credit_balance < CREDIT_LOW_THRESHOLD) {
+       return NextResponse.json({ 
+         error: "Your balance is below 50 credits. Top up your wallet to list new products. Your existing listings remain active."
+       }, { status: 400 });
     }
 
     // Insert Product FIRST
@@ -46,6 +48,8 @@ export async function POST(request: Request) {
        photo_url,
        photo_urls: photo_urls || [],
        stock: stock || 1,
+       has_variants: has_variants || false,
+       variants: has_variants ? variants : null,
        active: true,
        boosted: false
     }).select().single();

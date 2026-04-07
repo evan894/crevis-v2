@@ -25,6 +25,10 @@ export default function SettingsPage() {
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [slugSaving, setSlugSaving] = useState(false);
 
+  // Inventory Settings state
+  const [unlistDurationDays, setUnlistDurationDays] = useState(7);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
   const supabase = createBrowserClient();
 
   useEffect(() => {
@@ -32,11 +36,29 @@ export default function SettingsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: seller } = await supabase
-        .from("sellers")
-        .select("*")
+      const { data: member } = await supabase
+        .from("store_members")
+        .select("role, seller_id")
         .eq("user_id", user.id)
-        .single();
+        .eq("is_active", true)
+        .maybeSingle();
+
+      let targetSellerId = null;
+      if (member) {
+         setUserRole(member.role);
+         targetSellerId = member.seller_id;
+      }
+
+      // Query seller definition
+      let query = supabase.from("sellers").select("*");
+      if (targetSellerId) {
+         query = query.eq("id", targetSellerId);
+      } else {
+         query = query.eq("user_id", user.id);
+         setUserRole("owner");
+      }
+
+      const { data: seller } = await query.single();
 
       if (seller) {
         setSellerId(seller.id);
@@ -45,6 +67,7 @@ export default function SettingsPage() {
         setSlackConnected(!!seller.slack_user_id);
         setShopSlug(seller.shop_slug || "");
         setSlugInput(seller.shop_slug || "");
+        setUnlistDurationDays(seller.unlist_duration_days ?? 7);
       }
       setLoading(false);
     };
@@ -84,7 +107,7 @@ export default function SettingsPage() {
 
     const { error } = await supabase
       .from("sellers")
-      .update({ shop_name: shopName, category })
+      .update({ shop_name: shopName, category, unlist_duration_days: unlistDurationDays })
       .eq("id", sellerId);
 
     if (error) {
@@ -277,6 +300,47 @@ export default function SettingsPage() {
             </button>
           </form>
         </div>
+
+        {/* Section 2a: Inventory Settings */}
+        {(userRole === "owner" || userRole === "manager") && (
+          <div className="bg-surface-raised border border-border rounded-lg p-6 shadow-sm">
+             <h2 className="font-syne text-xl font-bold text-ink mb-4">Inventory Settings</h2>
+             <form onSubmit={handleSave} className="space-y-4 max-w-md">
+               <div className="space-y-2">
+                 <label className="text-sm font-dm-sans font-medium text-ink-secondary ml-1">Auto-delete unlisted products after:</label>
+                 <div className="flex flex-col gap-2 mt-2">
+                    {[
+                      { value: 3, label: "3 days" },
+                      { value: 7, label: "7 days (default)" },
+                      { value: 14, label: "14 days" },
+                      { value: 30, label: "30 days" },
+                      { value: 0, label: "Never auto-delete" }
+                    ].map((opt) => (
+                       <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name="unlistDuration" 
+                            value={opt.value}
+                            checked={unlistDurationDays === opt.value}
+                            onChange={() => setUnlistDurationDays(opt.value)}
+                            disabled={saving}
+                            className="w-4 h-4 text-saffron focus:ring-saffron border-border"
+                          />
+                          <span className="text-sm font-dm-sans text-ink">{opt.label}</span>
+                       </label>
+                    ))}
+                 </div>
+               </div>
+               <button
+                 type="submit"
+                 disabled={saving}
+                 className="h-[44px] px-6 mt-4 flex items-center justify-center bg-saffron text-surface-raised rounded-md font-dm-sans font-medium hover:bg-saffron-dark hover:shadow-saffron active:scale-[0.98] transition-all duration-base disabled:opacity-70 disabled:cursor-not-allowed"
+               >
+                 {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : "Save Changes"}
+               </button>
+             </form>
+          </div>
+        )}
 
         {/* Section 3: Slack Connection */}
         <div className="bg-surface-raised border border-border rounded-lg p-6 shadow-sm">

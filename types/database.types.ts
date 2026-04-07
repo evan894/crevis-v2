@@ -316,6 +316,7 @@ export type Database = {
           platform_fee: number
           product_id: string | null
           razorpay_payment_id: string | null
+          selected_variant: string | null
           seller_id: string
           status: string
         }
@@ -329,6 +330,7 @@ export type Database = {
           platform_fee: number
           product_id?: string | null
           razorpay_payment_id?: string | null
+          selected_variant?: string | null
           seller_id: string
           status?: string
         }
@@ -342,6 +344,7 @@ export type Database = {
           platform_fee?: number
           product_id?: string | null
           razorpay_payment_id?: string | null
+          selected_variant?: string | null
           seller_id?: string
           status?: string
         }
@@ -369,13 +372,17 @@ export type Database = {
           category: string
           created_at: string
           description: string | null
+          has_variants: boolean
           id: string
           name: string
           photo_url: string
           photo_urls: string[]
           price: number
+          scheduled_delete_at: string | null
           seller_id: string
           stock: number
+          unlisted_at: string | null
+          variants: Json | null
         }
         Insert: {
           active?: boolean
@@ -383,13 +390,17 @@ export type Database = {
           category: string
           created_at?: string
           description?: string | null
+          has_variants?: boolean
           id?: string
           name: string
           photo_url: string
           photo_urls?: string[]
           price: number
+          scheduled_delete_at?: string | null
           seller_id: string
           stock?: number
+          unlisted_at?: string | null
+          variants?: Json | null
         }
         Update: {
           active?: boolean
@@ -397,13 +408,17 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string | null
+          has_variants?: boolean
           id?: string
           name?: string
           photo_url?: string
           photo_urls?: string[]
           price?: number
+          scheduled_delete_at?: string | null
           seller_id?: string
           stock?: number
+          unlisted_at?: string | null
+          variants?: Json | null
         }
         Relationships: [
           {
@@ -420,7 +435,11 @@ export type Database = {
           category: string
           created_at: string
           credit_balance: number
+          deactivated: boolean
+          deactivated_at: string | null
+          deactivated_snapshot: { product_ids: string[] } | null
           earned_credits: number
+          grace_period_started_at: string | null
           id: string
           promo_credits: number
           qr_code_url: string | null
@@ -428,13 +447,18 @@ export type Database = {
           shop_slug: string | null
           slack_access_token: string | null
           slack_user_id: string | null
+          unlist_duration_days: number
           user_id: string
         }
         Insert: {
           category: string
           created_at?: string
           credit_balance?: number
+          deactivated?: boolean
+          deactivated_at?: string | null
+          deactivated_snapshot?: { product_ids: string[] } | null
           earned_credits?: number
+          grace_period_started_at?: string | null
           id?: string
           promo_credits?: number
           qr_code_url?: string | null
@@ -442,13 +466,18 @@ export type Database = {
           shop_slug?: string | null
           slack_access_token?: string | null
           slack_user_id?: string | null
+          unlist_duration_days?: number
           user_id: string
         }
         Update: {
           category?: string
           created_at?: string
           credit_balance?: number
+          deactivated?: boolean
+          deactivated_at?: string | null
+          deactivated_snapshot?: { product_ids: string[] } | null
           earned_credits?: number
+          grace_period_started_at?: string | null
           id?: string
           promo_credits?: number
           qr_code_url?: string | null
@@ -456,6 +485,7 @@ export type Database = {
           shop_slug?: string | null
           slack_access_token?: string | null
           slack_user_id?: string | null
+          unlist_duration_days?: number
           user_id?: string
         }
         Relationships: []

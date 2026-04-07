@@ -408,13 +408,7 @@ bot.on('text', async (ctx) => {
       return;
    }
 });
-bot.action(/buy:(.+)/, async (ctx) => {
-   try {
-       await ctx.answerCbQuery();
-       const productId = ctx.match[1];
-       const user = ctx.from;
-       if (!user) return;
-
+const proceedToPayment = async (ctx: any, productId: string, buyerTelegramId: string, variant: string | null) => {
        const sentMsg = await ctx.reply("Creating secure payment link... ⏳");
 
        try {
@@ -424,7 +418,8 @@ bot.action(/buy:(.+)/, async (ctx) => {
                headers: { "Content-Type": "application/json" },
                body: JSON.stringify({
                    productId,
-                   buyerTelegramId: user.id.toString()
+                   buyerTelegramId,
+                   variant
                })
            });
 
@@ -448,10 +443,67 @@ bot.action(/buy:(.+)/, async (ctx) => {
               "❌ Payment link creation failed. Please try again later."
            );
        }
+};
+
+bot.action(/buy:(.+)/, async (ctx) => {
+   try {
+       await ctx.answerCbQuery();
+       const productId = ctx.match[1];
+       const user = ctx.from;
+       if (!user) return;
+
+       const { data: product, error } = await supabase.from('products').select('has_variants, variants').eq('id', productId).single();
+
+       if (product && product.has_variants && product.variants) {
+           const options = (product.variants as any).options || [];
+           const buttons = [];
+           for (let i = 0; i < options.length; i += 2) {
+               const row = [];
+               for (let j = 0; j < 2 && i + j < options.length; j++) {
+                   const opt = options[i + j];
+                   if (opt.stock > 0) {
+                       row.push({ text: opt.label, callback_data: `size:${productId}:${opt.label}` });
+                   } else {
+                       row.push({ text: `${opt.label} (out of stock)`, callback_data: 'ignore' });
+                   }
+               }
+               buttons.push(row);
+           }
+           buttons.push([{ text: '⬅ Cancel', callback_data: 'main_menu' }]);
+
+           await ctx.reply("Select your size:", {
+               reply_markup: {
+                   inline_keyboard: buttons
+               }
+           });
+           return;
+       }
+
+       await proceedToPayment(ctx, productId, user.id.toString(), null);
    } catch (err) {
        console.error('[handler buy:*]', err);
        await ctx.reply('Something went wrong. Please try /start again.');
    }
+});
+
+bot.action(/size:(.+):(.+)/, async (ctx) => {
+    try {
+        await ctx.answerCbQuery();
+        const productId = ctx.match[1];
+        const sizeOption = ctx.match[2];
+        const user = ctx.from;
+        if (!user) return;
+        
+        await ctx.editMessageText(`Selected Size: ${sizeOption}`).catch(() => {});
+        await proceedToPayment(ctx, productId, user.id.toString(), sizeOption);
+    } catch (err) {
+        console.error('[handler size:*]', err);
+        await ctx.reply('Something went wrong. Please try /start again.');
+    }
+});
+
+bot.action('ignore', async (ctx) => {
+    await ctx.answerCbQuery("This option is currently out of stock", { show_alert: true }).catch(() => {});
 });
 
 

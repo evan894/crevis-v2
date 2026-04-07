@@ -20,6 +20,9 @@ type StoreInfo = {
   active_products: number;
   completed_orders: number;
   created_at: string;
+  deactivated?: boolean;
+  deactivated_at?: string | null;
+  deactivated_snapshot?: { product_ids: string[] } | null;
 };
 
 type Product = {
@@ -183,6 +186,21 @@ function StoreDetailPanel({
     }
   }, [store.id]);
 
+  const handleRestore = async () => {
+    try {
+      const res = await adminFetch(`/api/admin/stores/${store.id}/restore`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(data.message || "Store restored successfully!");
+      store.deactivated = false;
+      store.deactivated_at = undefined;
+      store.credit_balance = 0;
+      fetchDetail();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to restore store");
+    }
+  };
+
   useEffect(() => { fetchDetail(); }, [fetchDetail]);
 
   return (
@@ -201,7 +219,10 @@ function StoreDetailPanel({
                 <Store className="w-5 h-5 text-saffron" />
               </div>
               <div>
-                <h2 className="font-syne font-bold text-lg text-ink">{store.shop_name}</h2>
+                <h2 className="font-syne font-bold text-lg text-ink flex items-center gap-2">
+                   {store.shop_name}
+                   {store.deactivated && <span className="text-[10px] bg-error/10 text-error px-2 py-0.5 rounded-full font-semibold uppercase">Deactivated</span>}
+                </h2>
                 <p className="text-sm text-ink-secondary">{store.email} · {store.category}</p>
               </div>
             </div>
@@ -209,6 +230,18 @@ function StoreDetailPanel({
               <X className="w-5 h-5" />
             </button>
           </div>
+
+          {store.deactivated && (
+            <div className="mt-4 bg-error/5 border border-error/20 rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-error">Store Paused</p>
+                <p className="text-xs text-error/80">Deactivated on {store.deactivated_at ? new Date(store.deactivated_at).toLocaleDateString() : 'Unknown'}.</p>
+              </div>
+              <button onClick={handleRestore} className="px-4 py-2 bg-success text-white text-sm font-bold rounded-lg hover:bg-opacity-90 transition-opacity">
+                Undo Deactivation
+              </button>
+            </div>
+          )}
 
           {/* Quick Stats */}
           <div className="grid grid-cols-3 gap-3 mt-4">
@@ -376,6 +409,7 @@ export default function AdminStoresPage() {
   const [stores, setStores] = useState<StoreInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [filterDeactivated, setFilterDeactivated] = useState(false);
   const [selected, setSelected] = useState<StoreInfo | null>(null);
   const [authorized, setAuthorized] = useState(false);
   const [tokenInput, setTokenInput] = useState("");
@@ -401,8 +435,9 @@ export default function AdminStoresPage() {
   }, [fetchStores]);
 
   const filteredStores = stores.filter(s =>
-    s.shop_name.toLowerCase().includes(search.toLowerCase()) ||
-    s.email.toLowerCase().includes(search.toLowerCase())
+    (s.deactivated === true) === filterDeactivated &&
+    (s.shop_name.toLowerCase().includes(search.toLowerCase()) ||
+    s.email.toLowerCase().includes(search.toLowerCase()))
   );
 
   // Admin gate — simple token prompt if env var not set client-side
@@ -470,6 +505,11 @@ export default function AdminStoresPage() {
               placeholder="Search stores…"
               className="w-full h-[40px] pl-9 pr-3 bg-surface border border-border rounded-lg text-sm text-ink focus:border-saffron focus:ring-1 focus:ring-saffron outline-none transition-all"
             />
+          </div>
+          
+          <div className="flex gap-2 mt-4">
+             <button onClick={() => setFilterDeactivated(false)} className={`flex-1 text-sm py-1.5 rounded-lg font-medium transition-colors border ${!filterDeactivated ? 'bg-ink text-surface-raised border-ink' : 'bg-surface text-ink-secondary border-border hover:border-ink/20'}`}>Active</button>
+             <button onClick={() => setFilterDeactivated(true)} className={`flex-1 text-sm py-1.5 rounded-lg font-medium transition-colors border ${filterDeactivated ? 'bg-ink text-surface-raised border-ink' : 'bg-surface text-ink-secondary border-border hover:border-ink/20'}`}>Deactivated</button>
           </div>
         </div>
 

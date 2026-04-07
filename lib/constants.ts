@@ -2,6 +2,7 @@ export const CREDIT_COST_LISTING = 2;
 export const CREDIT_COST_BOOST = 10;
 export const PLATFORM_FEE_PERCENT = 0.05;
 export const LOW_CREDIT_THRESHOLD = 20;
+export const CREDIT_LOW_THRESHOLD = 50;
 
 export const CREDIT_PACKAGES = [
   { amount: 100, credits: 100, label: '₹100 = 100 credits' },
