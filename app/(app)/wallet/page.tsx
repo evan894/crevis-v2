@@ -12,6 +12,7 @@ type LedgerEntry = {
   id: string;
   action: string;
   credits_delta: number;
+  credit_type: string;
   note: string | null;
   created_at: string;
 };
@@ -24,6 +25,8 @@ export default function WalletPage() {
 
   const [loading, setLoading] = useState(true);
   const [balance, setBalance] = useState<number | null>(null);
+  const [earnedCredits, setEarnedCredits] = useState<number | null>(null);
+  const [promoCredits, setPromoCredits] = useState<number | null>(null);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   
   const [checkoutLoading, setCheckoutLoading] = useState<number | null>(null);
@@ -40,10 +43,12 @@ export default function WalletPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       
-      const { data: seller } = await supabase.from('sellers').select('id, credit_balance').eq('user_id', user.id).single();
+      const { data: seller } = await supabase.from('sellers').select('id, credit_balance, earned_credits, promo_credits').eq('user_id', user.id).single();
       if (!seller) return;
 
       setBalance(seller.credit_balance);
+      setEarnedCredits(seller.earned_credits);
+      setPromoCredits(seller.promo_credits);
 
       const { data: ledgerData } = await supabase
         .from('credit_ledger')
@@ -180,11 +185,24 @@ export default function WalletPage() {
            {/* Balance Hero Card */}
            <div className="bg-credit-light border border-border-strong rounded-xl p-8 flex flex-col items-center text-center shadow-sm">
               <WalletIcon className="w-8 h-8 text-credit mb-4" />
-              <h2 className="text-sm font-medium text-ink-secondary mb-1">Available Credits</h2>
-              <p className="font-jetbrains-mono font-bold text-[34px] text-credit tracking-tight mb-2">
-                 {balance ?? 0}
+              <h2 className="text-sm font-medium text-ink-secondary mb-1">Total Credits</h2>
+              <p className="font-jetbrains-mono font-bold text-[34px] text-credit tracking-tight mb-4">
+                 {balance ?? 0} <span className="text-sm tracking-normal text-ink-muted">CC</span>
               </p>
-              <p className="text-xs text-ink-muted">1 credit = 1 listing or priority action</p>
+              
+              <div className="w-full flex sm:flex-row flex-col justify-center gap-8 mt-2 pt-6 border-t border-border">
+                <div className="flex flex-col items-center">
+                  <span className="text-xs text-ink-secondary mb-1">Earned</span>
+                  <span className="font-jetbrains-mono font-bold text-success text-xl">{earnedCredits ?? 0}</span>
+                  <button className="text-xs text-ink mt-2 hover:underline">Withdraw →</button>
+                </div>
+                <div className="hidden sm:block w-px bg-border h-full"></div>
+                <div className="flex flex-col items-center">
+                  <span className="text-xs text-ink-secondary mb-1">Promotional</span>
+                  <span className="font-jetbrains-mono font-bold text-purple-600 text-xl">{promoCredits ?? 0}</span>
+                  <span className="text-xs text-ink-muted mt-2">Platform use only</span>
+                </div>
+              </div>
            </div>
 
            {/* Top-up + Coupon side by side */}
@@ -255,6 +273,7 @@ export default function WalletPage() {
                           <thead>
                              <tr className="bg-surface text-ink-muted border-b border-border">
                                 <th className="px-6 py-3 text-xs font-medium uppercase tracking-wider">Date</th>
+                                <th className="px-6 py-3 text-xs font-medium uppercase tracking-wider">Type</th>
                                 <th className="px-6 py-3 text-xs font-medium uppercase tracking-wider">Note</th>
                                 <th className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-right">Delta</th>
                              </tr>
@@ -266,6 +285,11 @@ export default function WalletPage() {
                                   <tr key={entry.id} className="border-b border-border hover:bg-surface/50 transition-colors">
                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-ink-secondary">
                                         {new Date(entry.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                     </td>
+                                     <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-full ${entry.credit_type === 'earned' ? 'bg-success/10 text-success' : 'bg-purple-100 text-purple-700'}`}>
+                                          {entry.credit_type}
+                                        </span>
                                      </td>
                                      <td className="px-6 py-4 text-sm text-ink">
                                         {entry.note || entry.action}

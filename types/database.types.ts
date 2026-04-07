@@ -217,6 +217,7 @@ export type Database = {
         Row: {
           action: string
           created_at: string
+          credit_type: string
           credits_delta: number
           id: string
           note: string | null
@@ -227,6 +228,7 @@ export type Database = {
         Insert: {
           action: string
           created_at?: string
+          credit_type?: string
           credits_delta: number
           id?: string
           note?: string | null
@@ -237,6 +239,7 @@ export type Database = {
         Update: {
           action?: string
           created_at?: string
+          credit_type?: string
           credits_delta?: number
           id?: string
           note?: string | null
@@ -417,7 +420,9 @@ export type Database = {
           category: string
           created_at: string
           credit_balance: number
+          earned_credits: number
           id: string
+          promo_credits: number
           qr_code_url: string | null
           shop_name: string
           shop_slug: string | null
@@ -429,7 +434,9 @@ export type Database = {
           category: string
           created_at?: string
           credit_balance?: number
+          earned_credits?: number
           id?: string
+          promo_credits?: number
           qr_code_url?: string | null
           shop_name: string
           shop_slug?: string | null
@@ -441,7 +448,9 @@ export type Database = {
           category?: string
           created_at?: string
           credit_balance?: number
+          earned_credits?: number
           id?: string
+          promo_credits?: number
           qr_code_url?: string | null
           shop_name?: string
           shop_slug?: string | null
@@ -460,6 +469,7 @@ export type Database = {
         Args: {
           p_action: string
           p_amount: number
+          p_credit_type?: string
           p_note?: string
           p_seller_id: string
         }

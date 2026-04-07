@@ -304,3 +304,31 @@ Inserted above the stats grid in `dashboard/page.tsx`:
 
 **Environment state:**
 - Vercel: ✅ Ready for deployment.
+
+---
+
+### Session 8.4.1 — April 7, 2026 — Store-Scoped Bot Sessions
+
+**Status:** ✅ Completed
+
+**What was built:**
+
+**Step 1 — Extended SessionData type**
+- Updated `SessionData` in `bot/index.ts` to track `storeContext` (seller's `shop_slug` or UUID) and `storeContextName`. 
+
+**Step 2 — Deep link parsing on /start**
+- Added handler logic for `store_*` payload that queries Supabase for the store details, sets `storeContext` and `storeContextName` sequentially into `ctx.session`, and gives a store-specific welcome.
+- Adjusted `product_*` payload logic to configure the same `storeContext` into session when entering via a direct product redirect, meaning clicking "Browse More" limits your browsing to that active store context.
+- Fixed generic `/start` handler to scrub `storeContext` clean so users can reset to the full global market view naturally.
+
+**Step 3 — Applied store context to queries**
+- Created `bot/utils/queries.ts` helper exposing `buildProductQuery` to uniformly apply the base conditions (`active=true`) alongside ordering and the dynamic context append `seller_id = storeContext`.
+- Updated `sendProducts` rendering (hitting both the underlying data queries + the paginated offset counters) to utilize context variables.
+- Updated the AI semantic search / free text lookup handler at `bot.on('text')` to natively enforce the `.eq('seller_id', storeContext)` requirement pre-fetch, ensuring query filtering restricts matched products downstream exclusively to the scoped shop context.
+
+**Step 4 — Navigational Context Indicators**
+- Set up conditional text output swapping on `browse` and `search` pathways. Returns `Select a category from {store}'s collection:` when scoped vs the generic default format when untethered.
+
+**Environment status:**
+- Full TS typing verifications and production build confirmed passing cleanly.
+- Commits pushed out and Vercel preview environments automatically deploying in the background.
