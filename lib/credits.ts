@@ -1,6 +1,6 @@
 import { supabaseAdmin } from './supabase-admin';
 
-type CreditAction = 'listing' | 'boost' | 'order_fee' | 'credit_purchase' | 'coupon' | 'order_earned';
+type CreditAction = 'listing' | 'boost' | 'order_fee' | 'credit_purchase' | 'coupon' | 'order_earned' | 'withdrawal';
 
 export async function deductCredits(
   sellerId: string,
@@ -8,7 +8,8 @@ export async function deductCredits(
   action: CreditAction,
   note?: string,
   orderValue?: number,
-  orderId?: string
+  orderId?: string,
+  creditType?: 'earned' | 'any'
 ) {
   const { data, error } = await supabaseAdmin.rpc('deduct_credits', {
     p_seller_id: sellerId,
@@ -17,6 +18,7 @@ export async function deductCredits(
     p_note: note,
     p_order_value: orderValue,
     p_order_id: orderId,
+    p_credit_type: creditType ?? 'any',
   });
   if (error) throw error;
   return data;

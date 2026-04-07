@@ -558,6 +558,50 @@ export type Database = {
         }
         Relationships: []
       }
+      withdrawals: {
+        Row: {
+          amount_credits: number
+          amount_inr: number
+          completed_at: string | null
+          created_at: string
+          failure_reason: string | null
+          id: string
+          razorpay_payout_id: string | null
+          seller_id: string
+          status: string
+        }
+        Insert: {
+          amount_credits: number
+          amount_inr: number
+          completed_at?: string | null
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          razorpay_payout_id?: string | null
+          seller_id: string
+          status?: string
+        }
+        Update: {
+          amount_credits?: number
+          amount_inr?: number
+          completed_at?: string | null
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          razorpay_payout_id?: string | null
+          seller_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawals_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -581,6 +625,7 @@ export type Database = {
         Args: {
           p_action: string
           p_amount: number
+          p_credit_type?: string
           p_note?: string
           p_order_id?: string
           p_order_value?: number
