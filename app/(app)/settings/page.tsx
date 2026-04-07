@@ -29,6 +29,19 @@ export default function SettingsPage() {
   const [unlistDurationDays, setUnlistDurationDays] = useState(7);
   const [userRole, setUserRole] = useState<string | null>(null);
 
+  // Bank Account Settings
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [bankAccount, setBankAccount] = useState<any>(null);
+  const [showBankModal, setShowBankModal] = useState(false);
+  const [bankSubmitting, setBankSubmitting] = useState(false);
+  const [accHolderName, setAccHolderName] = useState("");
+  const [accNumber, setAccNumber] = useState("");
+  const [accConfirm, setAccConfirm] = useState("");
+  const [ifsc, setIfsc] = useState("");
+  const [accType, setAccType] = useState("savings");
+  const [bankName, setBankName] = useState("");
+  const [ifscLoading, setIfscLoading] = useState(false);
+
   const supabase = createBrowserClient();
 
   useEffect(() => {
@@ -60,16 +73,23 @@ export default function SettingsPage() {
 
       const { data: seller } = await query.single();
 
-      if (seller) {
-        setSellerId(seller.id);
-        setShopName(seller.shop_name);
-        setCategory(seller.category);
-        setSlackConnected(!!seller.slack_user_id);
-        setShopSlug(seller.shop_slug || "");
-        setSlugInput(seller.shop_slug || "");
-        setUnlistDurationDays(seller.unlist_duration_days ?? 7);
-      }
-      setLoading(false);
+        if (seller) {
+          setSellerId(seller.id);
+          setShopName(seller.shop_name);
+          setCategory(seller.category);
+          setSlackConnected(!!seller.slack_user_id);
+          setShopSlug(seller.shop_slug || "");
+          setSlugInput(seller.shop_slug || "");
+          setUnlistDurationDays(seller.unlist_duration_days ?? 7);
+
+          if ((member?.role || "owner") === "owner") {
+            const { data: bankData } = await supabase.from('seller_bank_accounts').select('*').eq('seller_id', seller.id).maybeSingle();
+            if (bankData) {
+               setBankAccount(bankData);
+            }
+          }
+        }
+        setLoading(false);
     };
     fetchSeller();
   }, [supabase]);
@@ -140,6 +160,57 @@ export default function SettingsPage() {
     navigator.clipboard.writeText(text)
       .then(() => toast.success("Copied!"))
       .catch(() => toast.error("Failed to copy"));
+  };
+
+  useEffect(() => {
+    if (ifsc.length >= 6) {
+      setIfscLoading(true);
+      fetch(`https://ifsc.razorpay.com/${ifsc.toUpperCase()}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.BANK) {
+                setBankName(data.BANK);
+            }
+        })
+        .finally(() => setIfscLoading(false));
+    }
+  }, [ifsc]);
+
+  const handleBankSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (accNumber !== accConfirm) {
+      return toast.error("Account numbers do not match");
+    }
+    setBankSubmitting(true);
+    try {
+       const res = await fetch('/api/bank/verify', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+            sellerId,
+            accountHolderName: accHolderName,
+            accountNumber: accNumber,
+            ifsc: ifsc.toUpperCase(),
+            accountType: accType,
+            bankName: bankName
+         })
+       });
+       const data = await res.json();
+       if (!res.ok) throw new Error(data.error || "Failed to verify account");
+       
+       toast.success("Bank account added and verified");
+       setShowBankModal(false);
+       
+       if (sellerId) {
+         const { data: bankData } = await supabase.from('seller_bank_accounts').select('*').eq('seller_id', sellerId).single();
+         setBankAccount(bankData);
+       }
+    } catch (err: unknown) {
+       const error = err as Error;
+       toast.error(error.message);
+    } finally {
+       setBankSubmitting(false);
+    }
   };
 
   const slugError = (() => {
@@ -373,7 +444,92 @@ export default function SettingsPage() {
             </a>
           </div>
         </div>
+
+        {/* Section 4: Bank Account Settings */}
+        {userRole === "owner" && (
+          <div className="bg-surface-raised border border-border rounded-lg p-6 shadow-sm">
+            <h2 className="font-syne text-xl font-bold text-ink mb-2">Payout Account</h2>
+            {!bankAccount ? (
+              <div>
+                <p className="font-dm-sans text-sm text-ink-secondary mb-4">
+                  Add your bank account to withdraw earnings.
+                </p>
+                <button
+                  onClick={() => setShowBankModal(true)}
+                  className="h-[40px] px-4 border border-border bg-surface text-ink font-dm-sans font-medium text-sm rounded-md hover:bg-surface-raised transition-colors"
+                >
+                  Add Bank Account
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4 max-w-md bg-surface p-4 border border-border rounded-lg">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-dm-sans font-medium text-ink">{bankAccount.bank_name || "Bank Account"}</p>
+                    <p className="text-sm font-jetbrains-mono text-ink-secondary">••••{bankAccount.account_number.slice(-4)}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className={`text-xs font-dm-sans px-2 py-1 rounded-full ${bankAccount.verified ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
+                      {bankAccount.verified ? "Verified ✅" : "Pending verification ⏳"}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowBankModal(true)}
+                  className="text-xs font-dm-sans text-saffron font-medium hover:underline"
+                >
+                  Update Account
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
+
+      {showBankModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-surface border border-border rounded-lg p-6 max-w-md w-full shadow-2xl relative">
+            <button onClick={() => setShowBankModal(false)} className="absolute top-4 right-4 text-ink-muted hover:text-ink">
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="font-syne text-xl font-bold text-ink mb-4">Bank Account Details</h2>
+            <form onSubmit={handleBankSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-dm-sans font-medium text-ink-secondary">Account Holder Name</label>
+                <input required type="text" value={accHolderName} onChange={e => setAccHolderName(e.target.value)} className="w-full h-10 px-3 bg-surface border border-border rounded-md font-dm-sans text-sm outline-none focus:border-saffron focus:ring-1 focus:ring-saffron" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-dm-sans font-medium text-ink-secondary">Account Number</label>
+                <input required type="password" value={accNumber} onChange={e => setAccNumber(e.target.value)} className="w-full h-10 px-3 bg-surface border border-border rounded-md font-dm-sans text-sm outline-none focus:border-saffron" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-dm-sans font-medium text-ink-secondary">Re-enter Account Number</label>
+                <input required type="password" value={accConfirm} onChange={e => setAccConfirm(e.target.value)} className="w-full h-10 px-3 bg-surface border border-border rounded-md font-dm-sans text-sm outline-none focus:border-saffron" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-dm-sans font-medium text-ink-secondary">IFSC Code</label>
+                <input required type="text" value={ifsc} maxLength={11} onChange={e => setIfsc(e.target.value)} className="w-full h-10 px-3 bg-surface border border-border rounded-md font-dm-sans text-sm uppercase outline-none focus:border-saffron" />
+                {ifscLoading && <span className="text-xs text-ink-muted">Verifying...</span>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-dm-sans font-medium text-ink-secondary">Bank Name</label>
+                <input type="text" value={bankName} onChange={e => setBankName(e.target.value)} className="w-full h-10 px-3 bg-surface border border-border rounded-md font-dm-sans text-sm outline-none focus:border-saffron" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-dm-sans font-medium text-ink-secondary">Account Type</label>
+                <select value={accType} onChange={e => setAccType(e.target.value)} className="w-full h-10 px-3 bg-surface border border-border rounded-md font-dm-sans text-sm outline-none focus:border-saffron">
+                  <option value="savings">Savings</option>
+                  <option value="current">Current</option>
+                </select>
+              </div>
+              <button disabled={bankSubmitting} type="submit" className="w-full h-10 mt-2 bg-saffron text-white rounded-md font-medium text-sm hover:bg-saffron-dark transition-colors flex justify-center items-center">
+                {bankSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & Save"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

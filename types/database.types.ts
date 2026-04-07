@@ -448,6 +448,56 @@ export type Database = {
           },
         ]
       }
+      seller_bank_accounts: {
+        Row: {
+          account_holder_name: string
+          account_number: string
+          account_type: string
+          bank_name: string | null
+          created_at: string
+          id: string
+          ifsc_code: string
+          razorpay_fund_account_id: string | null
+          seller_id: string
+          updated_at: string
+          verified: boolean
+        }
+        Insert: {
+          account_holder_name: string
+          account_number: string
+          account_type: string
+          bank_name?: string | null
+          created_at?: string
+          id?: string
+          ifsc_code: string
+          razorpay_fund_account_id?: string | null
+          seller_id: string
+          updated_at?: string
+          verified?: boolean
+        }
+        Update: {
+          account_holder_name?: string
+          account_number?: string
+          account_type?: string
+          bank_name?: string | null
+          created_at?: string
+          id?: string
+          ifsc_code?: string
+          razorpay_fund_account_id?: string | null
+          seller_id?: string
+          updated_at?: string
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_bank_accounts_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: true
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sellers: {
         Row: {
           category: string
