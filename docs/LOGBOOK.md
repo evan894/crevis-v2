@@ -194,3 +194,39 @@ Hours remaining:  Manual testing + demo prep only
 - Preview branch: `preview/m3-demo` → pushed to origin
 - `npm run build`: 38 pages, exit 0 / `npx tsc --noEmit`: clean
 ---
+
+### Session 8.2.1 — April 7, 2026 — Product Link Infrastructure
+
+**Status:** ✅ Completed
+
+**What was built:**
+
+**Step 1 — DB verified.** All product IDs are UUIDs — confirmed via Supabase SQL. No schema changes needed.
+
+**Step 2 — `/p/[productId]/route.ts`**
+New redirect route. Validates UUID format, checks `products` table for active product, redirects to `https://t.me/Crevis_shop_bot?start=product_<id>`. Returns `/not-found` for invalid or inactive products.
+
+**Step 3 — Bot deep link handler**
+Updated `/start` handler in `bot/index.ts`. When `ctx.startPayload` begins with `product_`, extracts the UUID, fetches the product from Supabase, and sends a direct product card (photo + bold name + price + description + shop name + boosted emoji if applicable) with two buttons: **Buy Now** + **Browse More**. Gracefully handles missing/inactive products with a plain-text fallback message.
+
+**Step 4 — Copy Link button on product cards**
+Added `handleCopyLink()` to `app/(app)/products/page.tsx`. Copies `${NEXT_PUBLIC_APP_URL}/p/${product.id}` to clipboard via `navigator.clipboard`. Shows `"Product link copied!"` toast on success. Button appears as the first item in the `MoreVertical` action menu (above Boost and Deactivate). Added `Link2` icon from lucide-react.
+
+**Step 5 — Not-found page**
+Created `app/not-found.tsx` — shown when the redirect route gets an invalid or inactive product ID. Displays: "This product is no longer available on Crevis." with a "Browse all products on Telegram" button linking to `@Crevis_shop_bot`.
+
+**Bugs encountered:** None — clean first pass.
+
+**Decisions made:**
+- UUID regex validation in the route handler before DB hit — avoids unnecessary DB queries on garbage input.
+- Used 302 (temporary) redirect, not 301 — if a product is reactivated the original URL should still work.
+- Bot sends product card with `ctx.replyWithPhoto` (not `editMessageText`) since `/start` comes from a fresh deep link, not a callback query.
+
+**Build:** 39 pages, exit 0 / `npx tsc --noEmit`: clean
+
+**Environment state:**
+- Vercel: ✅ Deployed (commit 86380ba)
+- Shareable link format: `https://crevis-v2.vercel.app/p/<product-uuid>`
+- Example: `https://crevis-v2.vercel.app/p/10507609-2c84-444d-90f3-83b99470941f`
+---
+
