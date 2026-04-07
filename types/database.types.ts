@@ -312,10 +312,16 @@ export type Database = {
           buyer_telegram_id: string
           created_at: string
           credits_deducted: number
+          credits_released: boolean
+          credits_released_at: string | null
           id: string
           platform_fee: number
           product_id: string | null
           razorpay_payment_id: string | null
+          return_reason: string | null
+          return_requested: boolean
+          return_requested_at: string | null
+          return_window_closes_at: string | null
           selected_variant: string | null
           seller_id: string
           status: string
@@ -326,10 +332,16 @@ export type Database = {
           buyer_telegram_id: string
           created_at?: string
           credits_deducted: number
+          credits_released?: boolean
+          credits_released_at?: string | null
           id?: string
           platform_fee: number
           product_id?: string | null
           razorpay_payment_id?: string | null
+          return_reason?: string | null
+          return_requested?: boolean
+          return_requested_at?: string | null
+          return_window_closes_at?: string | null
           selected_variant?: string | null
           seller_id: string
           status?: string
@@ -340,10 +352,16 @@ export type Database = {
           buyer_telegram_id?: string
           created_at?: string
           credits_deducted?: number
+          credits_released?: boolean
+          credits_released_at?: string | null
           id?: string
           platform_fee?: number
           product_id?: string | null
           razorpay_payment_id?: string | null
+          return_reason?: string | null
+          return_requested?: boolean
+          return_requested_at?: string | null
+          return_window_closes_at?: string | null
           selected_variant?: string | null
           seller_id?: string
           status?: string

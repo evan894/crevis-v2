@@ -2,6 +2,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { markReturnResolved } from "./actions";
 
 export default async function OrdersPage() {
   const cookieStore = cookies();
@@ -63,6 +64,7 @@ export default async function OrdersPage() {
                   <th className="px-6 py-4 font-medium text-ink">Fee</th>
                   <th className="px-6 py-4 font-medium text-ink">Status</th>
                   <th className="px-6 py-4 font-medium text-ink">Date</th>
+                  <th className="px-6 py-4 font-medium text-ink">Returns</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -107,6 +109,24 @@ export default async function OrdersPage() {
                       </td>
                       <td className="px-6 py-4 font-jetbrains-mono text-ink-muted text-xs">
                         {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(order.created_at))}
+                      </td>
+                      <td className="px-6 py-4">
+                        {order.return_requested && order.status !== "returned" ? (
+                          <div className="space-y-2">
+                            <span className="text-xs text-saffron shrink-0 font-medium">↩️ Requested — {order.return_reason}</span>
+                            <form action={markReturnResolved.bind(null, order.id)}>
+                              <button type="submit" className="px-3 py-1 bg-surface-raised border border-border rounded text-xs font-medium hover:bg-surface-elevated transition-colors">
+                                Mark Return Resolved
+                              </button>
+                            </form>
+                          </div>
+                        ) : order.status === "returned" ? (
+                          <span className="text-xs text-ink-muted">Returned</span>
+                        ) : order.credits_released ? (
+                          <span className="text-xs text-ink-muted">Credits Released</span>
+                        ) : (
+                          <span className="text-xs text-ink-muted">Eligible for {Math.max(0, Math.ceil((new Date(order.return_window_closes_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} days</span>
+                        )}
                       </td>
                     </tr>
                   );

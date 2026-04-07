@@ -59,11 +59,14 @@ export async function POST(req: Request) {
        const fee = Math.ceil(order.amount * PLATFORM_FEE_PERCENT);
 
        // 1. Update order status
+       const returnWindowClosesAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
        await supabase.from('orders').update({
            status: 'completed',
            razorpay_payment_id: paymentId,
            platform_fee: fee,
-           credits_deducted: fee
+           credits_deducted: fee,
+           return_window_closes_at: returnWindowClosesAt,
+           credits_released: false
        }).eq('id', order.id);
 
        // 1a. Deduct stock and check auto-unlist
@@ -133,10 +136,17 @@ export async function POST(req: Request) {
        const slackUserId = Array.isArray(order.sellers) ? order.sellers[0]?.slack_user_id : order.sellers?.slack_user_id;
        
        try {
-           await bot.telegram.sendMessage(
-              order.buyer_telegram_id,
-              `✅ Order placed! ${productName} from ${shopName}.\n\nYou'll receive updates here as your order is packed and delivered.\nKeep this chat open — your OTP for delivery confirmation will be sent when your order is packed.`
-           );
+            await bot.telegram.sendMessage(
+               order.buyer_telegram_id,
+                `✅ Order placed! ${productName} from ${shopName}.\n\nYou have 2 days to request a return if needed.\nYou'll receive updates here as your order is packed and delivered.\nKeep this chat open — your OTP for delivery confirmation will be sent when your order is packed.`,
+               {
+                 reply_markup: {
+                   inline_keyboard: [
+                     [{ text: 'Request Return', callback_data: `return_order_${order.id}` }]
+                   ]
+                 }
+               }
+            );
        } catch (tgErr) {
            console.error("Buyer telegram notification failed", tgErr);
        }

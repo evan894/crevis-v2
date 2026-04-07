@@ -6,6 +6,7 @@ import path from 'path';
 // For typing
 import type { Database } from '../types/database.types';
 import { buildProductQuery } from './utils/queries';
+import { sendSlackDM } from '../lib/slack';
 
 // Load variables from .env.local for local development
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -747,6 +748,77 @@ async function sendProducts(ctx: BotContext, category: string, offset: number) {
     }
   });
 }
+
+bot.action(/^return_order_(.+)$/, async (ctx) => {
+  const orderId = ctx.match[1];
+  const { data: order } = await supabase.from('orders').select('return_window_closes_at, return_requested').eq('id', orderId).single();
+  
+  if (!order) return ctx.answerCbQuery('Order not found.');
+  if (order.return_requested) return ctx.answerCbQuery('Return already requested.', { show_alert: true });
+  if (!order.return_window_closes_at || new Date(order.return_window_closes_at).getTime() <= Date.now()) {
+    await ctx.answerCbQuery();
+    return ctx.reply('Return window has closed for this order.');
+  }
+
+  await ctx.reply('Why do you want to return?', {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: 'Wrong item received', callback_data: `submit_return_${orderId}_wrong` }],
+        [{ text: 'Item damaged', callback_data: `submit_return_${orderId}_damaged` }],
+        [{ text: 'Item not as described', callback_data: `submit_return_${orderId}_not_described` }],
+        [{ text: 'Changed my mind', callback_data: `submit_return_${orderId}_changed_mind` }]
+      ]
+    }
+  });
+  await ctx.answerCbQuery();
+});
+
+bot.action(/^submit_return_(.+)_(.+)$/, async (ctx) => {
+  const orderId = ctx.match[1];
+  const reasonKey = ctx.match[2];
+  
+  const reasons: Record<string, string> = {
+    wrong: 'Wrong item received',
+    damaged: 'Item damaged',
+    not_described: 'Item not as described',
+    changed_mind: 'Changed my mind'
+  };
+  
+  const reason = reasons[reasonKey] || 'Other';
+
+  const { data: order } = await supabase.from('orders')
+    .select('*, products(name), sellers(slack_access_token, slack_user_id)')
+    .eq('id', orderId)
+    .single();
+
+  if (!order) return ctx.answerCbQuery('Order not found.');
+  if (order.return_requested) return ctx.answerCbQuery('Return already requested.');
+  if (!order.return_window_closes_at || new Date(order.return_window_closes_at).getTime() <= Date.now()) {
+    await ctx.answerCbQuery();
+    return ctx.reply('Return window has closed for this order.');
+  }
+
+  await supabase.from('orders').update({
+    return_requested: true,
+    return_requested_at: new Date().toISOString(),
+    return_reason: reason
+  }).eq('id', orderId);
+
+  const productName = Array.isArray(order.products) ? order.products[0]?.name : order.products?.name;
+  
+  await ctx.editMessageText(`Return request submitted for ${productName}.\nThe seller will contact you to arrange pickup.\nCredits will not be released until return is resolved.`);
+
+  const slackAccessToken = Array.isArray(order.sellers) ? order.sellers[0]?.slack_access_token : order.sellers?.slack_access_token;
+  const slackUserId = Array.isArray(order.sellers) ? order.sellers[0]?.slack_user_id : order.sellers?.slack_user_id;
+
+  if (slackAccessToken && slackUserId) {
+    await sendSlackDM(
+      slackAccessToken,
+      slackUserId,
+      `↩️ Return requested for ${productName}\nBuyer: ${order.buyer_name}\nReason: ${reason}\nContact buyer to arrange pickup.`
+    ).catch(console.error);
+  }
+});
 
 if (process.env.NODE_ENV !== 'production' || process.env.RUN_BOT_LOCAL === 'true') {
   bot.launch()

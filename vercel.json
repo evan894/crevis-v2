@@ -9,6 +9,10 @@
     {
       "path": "/api/cron/cleanup-products",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/release-credits",
+      "schedule": "0 */6 * * *"
     }
   ]
 }

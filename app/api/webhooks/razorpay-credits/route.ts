@@ -77,7 +77,8 @@ export async function POST(req: Request) {
     const newBalance = await addCredits(
       purchase.seller_id, 
       purchase.credits_added, 
-      'credit_purchase', 
+      'credit_purchase',
+      'promo', 
       `Razorpay txn: ${razorpay_payment_id}`
     );
 

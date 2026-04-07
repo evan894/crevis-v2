@@ -433,6 +433,18 @@ Inserted above the stats grid in `dashboard/page.tsx`:
 
 ---
 
+### Session 11.1.1 — 2-Day Return Window
+**Completed:** Yes
+**Steps Taken:**
+1. Created and applied migration for 2-day return window fields on `orders`.
+2. Updated DB type definitions in `types/database.types.ts`.
+3. Modified Razorpay webhook `route.ts` to assign `return_window_closes_at` upon order payment completion. Added interactive inline inline keyboard asking the buyer: `Request Return`.
+4. Extended backend `.action` states inside `bot/index.ts` intercepting inline queries for initiating returns, logging reasons internally without dispersing earnings implicitly.
+5. Created a new Node-deployed background chron running under `app/api/cron/release-credits/route.ts` parsing past order completion thresholds properly disbursing stored seller balances gracefully via `#addCredits` + Slack notifications. Added entry into `vercel.json` natively natively configured as `0 */6 * * *`.
+6. Augmented the core `app/(app)/orders/page.tsx` view dynamically surfacing visual alerts outlining internal "Return requested" queries alongside an adjacent form enabling sellers to immediately `markReturnResolved` effectively concluding internal queries natively rendering the item gracefully marked "returned".
+
+---
+
 ### Session 10.1.2 — Size + Inventory Management
 **Completed:** Yes
 **Steps Taken:**

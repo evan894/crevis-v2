@@ -1,6 +1,6 @@
 import { supabaseAdmin } from './supabase-admin';
 
-type CreditAction = 'listing' | 'boost' | 'order_fee' | 'credit_purchase' | 'coupon';
+type CreditAction = 'listing' | 'boost' | 'order_fee' | 'credit_purchase' | 'coupon' | 'order_earned';
 
 export async function deductCredits(
   sellerId: string,
@@ -26,12 +26,14 @@ export async function addCredits(
   sellerId: string,
   amount: number,
   action: CreditAction,
+  creditType: 'promo' | 'earned' = 'promo',
   note?: string
 ) {
   const { data, error } = await supabaseAdmin.rpc('add_credits', {
     p_seller_id: sellerId,
     p_amount: amount,
     p_action: action,
+    p_credit_type: creditType,
     p_note: note,
   });
   if (error) throw error;
