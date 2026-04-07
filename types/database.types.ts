@@ -419,6 +419,7 @@ export type Database = {
           credit_balance: number
           id: string
           shop_name: string
+          shop_slug: string | null
           slack_access_token: string | null
           slack_user_id: string | null
           user_id: string
@@ -429,6 +430,7 @@ export type Database = {
           credit_balance?: number
           id?: string
           shop_name: string
+          shop_slug?: string | null
           slack_access_token?: string | null
           slack_user_id?: string | null
           user_id: string
@@ -439,6 +441,7 @@ export type Database = {
           credit_balance?: number
           id?: string
           shop_name?: string
+          shop_slug?: string | null
           slack_access_token?: string | null
           slack_user_id?: string | null
           user_id?: string
@@ -473,6 +476,10 @@ export type Database = {
           p_seller_id: string
         }
         Returns: number
+      }
+      generate_shop_slug: {
+        Args: { shop_name: string }
+        Returns: string
       }
       redeem_coupon: {
         Args: { p_code: string; p_seller_id: string }

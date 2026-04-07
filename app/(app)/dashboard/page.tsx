@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@/lib/supabase";
-import { ShoppingBag, Wallet, PackageOpen, TrendingUp, AlertTriangle, X, MessageSquare, Users } from "lucide-react";
+import { ShoppingBag, Wallet, PackageOpen, TrendingUp, AlertTriangle, X, MessageSquare, Users, Link2, Copy, Store } from "lucide-react";
 import Link from "next/link";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -84,6 +84,7 @@ export default function DashboardPage() {
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [slackConnected, setSlackConnected] = useState(false);
   const [isOwnerOrManager, setIsOwnerOrManager] = useState(false);
+  const [shopSlug, setShopSlug] = useState<string>("");
 
   const [stats, setStats] = useState({
      shopName: "",
@@ -183,10 +184,12 @@ export default function DashboardPage() {
 
        const { data: seller } = await supabase
          .from("sellers")
-         .select("id, shop_name, credit_balance, slack_user_id")
+         .select("id, shop_name, shop_slug, credit_balance, slack_user_id")
          .eq("user_id", user.id)
          .single();
        if (!seller) return;
+
+       setShopSlug(seller.shop_slug || "");
 
        setSellerId(seller.id);
        setSlackConnected(!!seller.slack_user_id);
@@ -274,6 +277,16 @@ export default function DashboardPage() {
      setShowCreditWarning(false);
   };
 
+  const handleCopyDashboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        // Simple inline alert — no toast dependency needed here
+        const btn = document.getElementById(`copy-${label}`);
+        if (btn) { btn.textContent = "Copied!"; setTimeout(() => { btn.textContent = "Copy"; }, 1500); }
+      })
+      .catch(() => {});
+  };
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
@@ -338,6 +351,49 @@ export default function DashboardPage() {
 
       {/* Main Content Area */}
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-12">
+
+         {/* Shop Card */}
+         {!loading && shopSlug && (
+           <div className="bg-surface-raised border border-border rounded-xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+             <div className="flex items-center gap-3 shrink-0">
+               <div className="w-10 h-10 rounded-full bg-saffron/10 flex items-center justify-center">
+                 <Store className="w-5 h-5 text-saffron" />
+               </div>
+               <div>
+                 <p className="font-syne font-bold text-ink text-base leading-tight">{stats.shopName}</p>
+                 <p className="text-xs text-ink-muted font-dm-sans">Your store</p>
+               </div>
+             </div>
+             <div className="flex-1 flex flex-col gap-2 min-w-0">
+               {/* Shop link row */}
+               <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2">
+                 <Link2 className="w-3.5 h-3.5 text-saffron shrink-0" />
+                 <span className="font-dm-sans text-xs text-ink truncate flex-1">
+                   {(process.env.NEXT_PUBLIC_APP_URL || "https://crevis-v2.vercel.app")}/s/{shopSlug}
+                 </span>
+                 <button
+                   id="copy-shoplink"
+                   onClick={() => handleCopyDashboard(`${process.env.NEXT_PUBLIC_APP_URL || "https://crevis-v2.vercel.app"}/s/${shopSlug}`, "shoplink")}
+                   className="shrink-0 text-[11px] font-medium text-ink-secondary hover:text-saffron transition-colors flex items-center gap-1"
+                 >
+                   <Copy className="w-3 h-3" /> Copy
+                 </button>
+               </div>
+               {/* Bot handle row */}
+               <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2">
+                 <span className="text-xs shrink-0">🤖</span>
+                 <span className="font-dm-sans text-xs text-ink truncate flex-1">@Crevis_shop_bot</span>
+                 <button
+                   id="copy-bothandle"
+                   onClick={() => handleCopyDashboard("@Crevis_shop_bot", "bothandle")}
+                   className="shrink-0 text-[11px] font-medium text-ink-secondary hover:text-saffron transition-colors flex items-center gap-1"
+                 >
+                   <Copy className="w-3 h-3" /> Copy
+                 </button>
+               </div>
+             </div>
+           </div>
+         )}
 
          {/* Stats Grid */}
          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
