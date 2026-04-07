@@ -430,3 +430,28 @@ Inserted above the stats grid in `dashboard/page.tsx`:
 **Environment state:**
 - Vercel: ✅ Pushed & Deployed
 - Typecheck & Build: ✅ Built cleanly.
+
+---
+
+### Session 10.1.2 — Size + Inventory Management
+**Completed:** Yes
+**Steps Taken:**
+1. Created `0013_product_variants.sql` to add `has_variants` and `variants` to `products`, and `selected_variant` to `orders`.
+2. Updated `app/(app)/products/new/page.tsx` with a dynamic variant mapping UI handling specific size presets for Clothing and Footwear, plus a custom size option.
+3. Updated `app/api/products/create/route.ts` to properly pass variant data and compute aggregated sum for canonical stock.
+4. Updated `app/api/webhooks/razorpay-orders/route.ts` to deduct individual size stock upon transaction completion, updating canonical stock, and using logic determining if it needs unlisting.
+5. Upgraded `bot/index.ts` to present inline size selection buttons if a product possesses variants. Passed chosen variance directly back to API generation script to assign `selected_variant` properly into the records natively.
+
+---
+
+### Session 10.1.3 — Bot Category Qualifying Questions
+**Completed:** Yes
+**Steps Taken:**
+1. Extended `SessionData` in `bot/index.ts` adding `filters` object (size, gender, budget, type) alongside tracking `filterStep`.
+2. Created intercepting qualifying question handlers logic for Clothing (Size -> Gender -> Budget), Footwear (Shoe Size -> Type), and generic accessories categories (Budget).
+3. Developed multi-stage callback action pipeline `/filter:(.+)/(.+)` gracefully capturing filters sequentially via `inline_keyboard` overlays.
+4. Upgraded core `sendProducts` method matching dynamic variants logic `.contains("variants", { options: [...] })`, pricing checks (`.gte()`, `.lte()`), alongside fallback JS mapping filter checking if variant has physical stock `> 0`.
+5. Modified `bot.on('text')` (AI/text search functionality fallback system) adopting equivalent filter scopes.
+6. Emitted missing results dialog alternatives allowing users to quickly return to broad catalogues or reset filters automatically.
+
+---

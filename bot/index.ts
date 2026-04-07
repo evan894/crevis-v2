@@ -25,6 +25,14 @@ interface SessionData {
   searchState?: string;
   storeContext?: string | null;
   storeContextName?: string | null;
+  filters?: {
+    category: string | null;
+    size: string | null;
+    gender: string | null;
+    type: string | null;
+    budget: string | null;
+  };
+  filterStep?: string;
 }
 
 export interface BotContext extends Context {
@@ -79,8 +87,8 @@ bot.start(async (ctx) => {
       });
     }
 
-    if (ctx.session) ctx.session = { category: undefined, offset: undefined, searchState: undefined, storeContext: undefined, storeContextName: undefined }; 
-    else (ctx.session as SessionData) = { category: undefined, offset: undefined, searchState: undefined, storeContext: undefined, storeContextName: undefined };
+    if (ctx.session) ctx.session = { category: undefined, offset: undefined, searchState: undefined, storeContext: undefined, storeContextName: undefined, filters: undefined, filterStep: undefined }; 
+    else (ctx.session as SessionData) = { category: undefined, offset: undefined, searchState: undefined, storeContext: undefined, storeContextName: undefined, filters: undefined, filterStep: undefined };
 
     const payload = ctx.startPayload;
     if (payload) {
@@ -208,15 +216,118 @@ bot.action(/category:(.+)/, async (ctx) => {
   try {
     await ctx.answerCbQuery();
     const category = ctx.match[1];
-    if (!ctx.session) (ctx.session as SessionData) = { category: undefined, offset: undefined, searchState: undefined };
+    if (!ctx.session) (ctx.session as SessionData) = {};
     ctx.session.category = category;
     ctx.session.offset = 0;
+    ctx.session.filters = { category, size: null, gender: null, type: null, budget: null };
     
-    await sendProducts(ctx, category, 0);
+    if (category === 'Clothing') {
+       ctx.session.filterStep = 'clothing_size';
+       await askClothingSize(ctx);
+    } else if (category === 'Footwear') {
+       ctx.session.filterStep = 'footwear_size';
+       await askFootwearSize(ctx);
+    } else {
+       ctx.session.filterStep = 'budget';
+       await askBudget(ctx);
+    }
   } catch (err) {
     console.error('[handler category:*]', err);
     await ctx.reply('Something went wrong. Please try /start again.');
   }
+});
+
+async function askClothingSize(ctx: BotContext) {
+   const buttons = [
+      [{ text: 'XS', callback_data: 'filter:size:XS' }, { text: 'S', callback_data: 'filter:size:S' }, { text: 'M', callback_data: 'filter:size:M' }],
+      [{ text: 'L', callback_data: 'filter:size:L' }, { text: 'XL', callback_data: 'filter:size:XL' }, { text: 'XXL', callback_data: 'filter:size:XXL' }],
+      [{ text: 'Any Size / Skip', callback_data: 'filter:size:any' }]
+   ];
+   return renderFilterQuestion(ctx, "What size are you looking for?", buttons);
+}
+
+async function askFootwearSize(ctx: BotContext) {
+   const buttons = [
+      [{ text: '5', callback_data: 'filter:size:5' }, { text: '6', callback_data: 'filter:size:6' }, { text: '7', callback_data: 'filter:size:7' }],
+      [{ text: '8', callback_data: 'filter:size:8' }, { text: '9', callback_data: 'filter:size:9' }, { text: '10', callback_data: 'filter:size:10' }],
+      [{ text: '11', callback_data: 'filter:size:11' }, { text: 'Any Size / Skip', callback_data: 'filter:size:any' }]
+   ];
+   return renderFilterQuestion(ctx, "What shoe size?", buttons);
+}
+
+async function askGender(ctx: BotContext) {
+    const buttons = [
+        [{ text: 'Men', callback_data: 'filter:gender:Men' }, { text: 'Women', callback_data: 'filter:gender:Women' }],
+        [{ text: 'Kids', callback_data: 'filter:gender:Kids' }, { text: 'Unisex', callback_data: 'filter:gender:Unisex' }],
+        [{ text: 'Any / Skip', callback_data: 'filter:gender:any' }]
+    ];
+    return renderFilterQuestion(ctx, "For whom?", buttons);
+}
+
+async function askType(ctx: BotContext) {
+    const buttons = [
+        [{ text: 'Casual', callback_data: 'filter:type:Casual' }, { text: 'Formal', callback_data: 'filter:type:Formal' }],
+        [{ text: 'Sports', callback_data: 'filter:type:Sports' }, { text: 'Any / Skip', callback_data: 'filter:type:any' }]
+    ];
+    return renderFilterQuestion(ctx, "Type?", buttons);
+}
+
+async function askBudget(ctx: BotContext) {
+    const buttons = [
+        [{ text: 'Under ₹500', callback_data: 'filter:budget:under500' }],
+        [{ text: '₹500–₹1500', callback_data: 'filter:budget:500to1500' }],
+        [{ text: '₹1500+', callback_data: 'filter:budget:above1500' }],
+        [{ text: 'Any Budget / Skip', callback_data: 'filter:budget:any' }]
+    ];
+    return renderFilterQuestion(ctx, "Budget?", buttons);
+}
+
+async function renderFilterQuestion(ctx: BotContext, text: string, buttons: any) {
+    buttons.push([{ text: '⬅ Cancel', callback_data: 'main_menu' }]);
+    if (ctx.callbackQuery && ctx.callbackQuery.message) {
+        await ctx.editMessageText(text, { reply_markup: { inline_keyboard: buttons } }).catch(() => {});
+    } else {
+        await ctx.reply(text, { reply_markup: { inline_keyboard: buttons } });
+    }
+}
+
+bot.action(/filter:(size|gender|type|budget):(.+)/, async (ctx) => {
+   try {
+      await ctx.answerCbQuery();
+      const filterType = ctx.match[1];
+      const filterValue = ctx.match[2];
+
+      if (!ctx.session?.filters) {
+          return sendMainMenu(ctx, true);
+      }
+
+      const filters = ctx.session.filters;
+
+      if (filterType === 'size') {
+          filters.size = filterValue === 'any' ? null : filterValue;
+          if (filters.category === 'Clothing') {
+              ctx.session.filterStep = 'clothing_gender';
+              await askGender(ctx);
+          } else if (filters.category === 'Footwear') {
+              ctx.session.filterStep = 'footwear_type';
+              await askType(ctx);
+          }
+      } else if (filterType === 'gender' || filterType === 'type') {
+          if (filterType === 'gender') filters.gender = filterValue === 'any' ? null : filterValue;
+          if (filterType === 'type') filters.type = filterValue === 'any' ? null : filterValue;
+          ctx.session.filterStep = 'budget';
+          await askBudget(ctx);
+      } else if (filterType === 'budget') {
+          filters.budget = filterValue === 'any' ? null : filterValue;
+          ctx.session.filterStep = undefined;
+          await ctx.editMessageText(`Searching in ${filters.category}...`).catch(() => {});
+          await sendProducts(ctx, filters.category || '', 0);
+      }
+
+   } catch (err) {
+      console.error('[handler filter]', err);
+      await ctx.reply('Something went wrong. Please try /start again.');
+   }
 });
 
 bot.action('load_more', async (ctx) => {
@@ -362,13 +473,36 @@ bot.on('text', async (ctx) => {
          }
 
          // Fetch full product details
-         const { data: matchedProducts } = await buildProductQuery(supabase, ctx.session?.storeContext || null)
-            .in('id', matchedIds);
+         let queryMatch = buildProductQuery(supabase, ctx.session?.storeContext || null).in('id', matchedIds);
+
+         const filters = ctx.session?.filters;
+         if (filters) {
+             if (filters.size && filters.size !== 'any') {
+                 queryMatch = queryMatch.contains('variants', { options: [{ label: filters.size }] });
+             }
+             if (filters.budget && filters.budget !== 'any') {
+                 if (filters.budget === 'under500') queryMatch = queryMatch.lte('price', 500);
+                 else if (filters.budget === '500to1500') queryMatch = queryMatch.gte('price', 500).lte('price', 1500);
+                 else if (filters.budget === 'above1500') queryMatch = queryMatch.gte('price', 1500);
+             }
+         }
+
+         const { data: rawMatchedProducts } = await queryMatch;
          
          await ctx.telegram.deleteMessage(ctx.chat.id, sentMsg.message_id).catch(()=>{});
 
+         let matchedProducts = rawMatchedProducts || [];
+         if (filters?.size && filters.size !== 'any') {
+             matchedProducts = matchedProducts.filter((p: any) => {
+                 if (!p.has_variants || !p.variants) return false;
+                 const opts = (p.variants as any).options;
+                 return opts.some((o: any) => o.label === filters.size && o.stock > 0);
+             });
+         }
+
          if (!matchedProducts || matchedProducts.length === 0) {
-            await ctx.reply("Couldn't find that. Try browsing by category.", {
+            const noResText = filters ? "No products found matching your search and preferences." : "Couldn't find that. Try browsing by category.";
+            await ctx.reply(noResText, {
                reply_markup: {
                  inline_keyboard: [[{ text: '🛍 Browse Products', callback_data: 'browse' }]]
                }
@@ -508,9 +642,29 @@ bot.action('ignore', async (ctx) => {
 
 
 async function sendProducts(ctx: BotContext, category: string, offset: number) {
-  const { data: products, error } = await buildProductQuery(supabase, ctx.session?.storeContext || null)
+  let query = buildProductQuery(supabase, ctx.session?.storeContext || null)
     .eq('category', category)
-    .range(offset, offset + 4);
+    .eq('active', true);
+
+  const filters = ctx.session?.filters;
+  if (filters) {
+      if (filters.size && filters.size !== 'any') {
+          query = query.contains('variants', { options: [{ label: filters.size }] });
+      }
+      if (filters.budget && filters.budget !== 'any') {
+          if (filters.budget === 'under500') query = query.lte('price', 500);
+          else if (filters.budget === '500to1500') query = query.gte('price', 500).lte('price', 1500);
+          else if (filters.budget === 'above1500') query = query.gte('price', 1500);
+      }
+      if (filters.gender && filters.gender !== 'any') {
+          query = query.or(`name.ilike.%${filters.gender}%,description.ilike.%${filters.gender}%`);
+      }
+      if (filters.type && filters.type !== 'any') {
+          query = query.or(`name.ilike.%${filters.type}%,description.ilike.%${filters.type}%`);
+      }
+  }
+
+  const { data: rawProducts, error } = await query;
 
   if (error) {
     console.error(error);
@@ -518,30 +672,32 @@ async function sendProducts(ctx: BotContext, category: string, offset: number) {
     return;
   }
 
-  let countQuery = supabase
-    .from('products')
-    .select('*', { count: 'exact', head: true })
-    .eq('category', category)
-    .eq('active', true);
-  
-  if (ctx.session?.storeContext) {
-    countQuery = countQuery.eq('seller_id', ctx.session.storeContext);
+  // Final JS filter for size stock > 0
+  let products = rawProducts || [];
+  if (filters?.size && filters.size !== 'any') {
+      products = products.filter((p: any) => {
+          if (!p.has_variants || !p.variants) return false;
+          const opts = (p.variants as any).options;
+          return opts.some((o: any) => o.label === filters.size && o.stock > 0);
+      });
   }
 
-  const { count } = await countQuery;
-  
-  if (!products || products.length === 0) {
+  // Manual pagination
+  const count = products.length;
+  const paginatedProducts = products.slice(offset, offset + 4);
+
+  if (count === 0) {
      if (offset === 0) {
         if (ctx.callbackQuery?.message && 'text' in ctx.callbackQuery.message) {
-           await ctx.editMessageText(`No products available in ${category} yet. Try another category.`, {
+           await ctx.editMessageText(`No products matching your filters in ${category}.`, {
               reply_markup: {
-                inline_keyboard: [[{ text: '⬅ Back to Categories', callback_data: 'browse' }]]
+                inline_keyboard: [[{ text: '⬅ Try Different Filters', callback_data: `category:${category}` }], [{ text: '⬅ Back to Categories', callback_data: 'browse' }]]
               }
            }).catch(() => {});
         } else {
-           await ctx.reply(`No products available in ${category} yet. Try another category.`, {
+           await ctx.reply(`No products matching your filters in ${category}.`, {
               reply_markup: {
-                inline_keyboard: [[{ text: '⬅ Back to Categories', callback_data: 'browse' }]]
+                inline_keyboard: [[{ text: '⬅ Try Different Filters', callback_data: `category:${category}` }], [{ text: '⬅ Back to Categories', callback_data: 'browse' }]]
               }
            });
         }
@@ -561,7 +717,7 @@ async function sendProducts(ctx: BotContext, category: string, offset: number) {
     }
   }
 
-  for (const p of products) {
+  for (const p of paginatedProducts) {
     const sData = Array.isArray(p.sellers) ? p.sellers[0] : p.sellers;
     const shopName = sData?.shop_name || 'Unknown Shop';
     const caption = `**${p.name}**\nPrice: ₹${p.price}\nShop: ${shopName}${p.boosted ? ' 🚀 *BOOSTED*' : ''}\n\n${p.description || ''}`;
@@ -577,8 +733,7 @@ async function sendProducts(ctx: BotContext, category: string, offset: number) {
     });
   }
 
-  const total = count || 0;
-  const hasMore = (offset + 5) < total;
+  const hasMore = (offset + 4) < count;
 
   const navButtons = [];
   if (hasMore) {
@@ -586,7 +741,7 @@ async function sendProducts(ctx: BotContext, category: string, offset: number) {
   }
   navButtons.push([{ text: '⬅ Back to Categories', callback_data: 'browse' }]);
 
-  await ctx.reply(`Showing ${Math.min(offset + 5, total)} of ${total} in ${category}`, {
+  await ctx.reply(`Showing ${Math.min(offset + 4, count)} of ${count} in ${category}`, {
     reply_markup: {
       inline_keyboard: navButtons
     }
