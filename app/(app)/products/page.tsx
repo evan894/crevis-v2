@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { createBrowserClient } from "@/lib/supabase";
-import { Loader2, Zap, MoreVertical, Plus, PackageOpen, Power, PowerOff, Trash2 } from "lucide-react";
+import { Loader2, Zap, MoreVertical, Plus, PackageOpen, Power, PowerOff, Trash2, Link2 } from "lucide-react";
 import { CREDIT_COST_BOOST } from "@/lib/constants";
 import Link from "next/link";
 import Image from "next/image";
@@ -108,6 +108,14 @@ export default function ProductsPage() {
       setActionLoading(null);
       setMenuOpen(null);
     }
+  };
+
+  const handleCopyLink = (id: string) => {
+    const link = `${process.env.NEXT_PUBLIC_APP_URL}/p/${id}`;
+    navigator.clipboard.writeText(link)
+      .then(() => toast.success("Product link copied!"))
+      .catch(() => toast.error("Failed to copy link"));
+    setMenuOpen(null);
   };
 
   const filteredProducts = products.filter(p => {
@@ -241,7 +249,16 @@ export default function ProductsPage() {
                      {menuOpen === product.id && (
                        <div className="absolute right-0 top-full mt-1 w-48 bg-surface-raised border border-border rounded-lg shadow-lg overflow-hidden z-20 py-1 animate-in zoom-in-95 duration-fast">
                          
-                         {!product.boosted && (
+                          {/* Copy Link */}
+                          <button
+                            onClick={() => handleCopyLink(product.id)}
+                            className="w-full px-4 py-2 text-sm text-left flex items-center gap-2 hover:bg-surface text-ink transition-colors"
+                          >
+                            <Link2 className="w-4 h-4 text-ink-secondary" />
+                            Copy Link
+                          </button>
+
+                          {!product.boosted && (
                            <button 
                              onClick={() => handleBoost(product.id)}
                              disabled={actionLoading === product.id}

@@ -78,12 +78,55 @@ bot.start(async (ctx) => {
     if (ctx.session) ctx.session = { category: undefined, offset: undefined, searchState: undefined }; 
     else (ctx.session as SessionData) = { category: undefined, offset: undefined, searchState: undefined };
 
+    // ── Product deep link: /start product_<uuid> ────────────────────────
+    const payload = ctx.startPayload;
+    if (payload && payload.startsWith('product_')) {
+      const productId = payload.replace('product_', '');
+
+      const { data: product } = await supabase
+        .from('products')
+        .select('*, sellers(shop_name)')
+        .eq('id', productId)
+        .eq('active', true)
+        .single();
+
+      if (!product) {
+        await ctx.reply(
+          "Sorry, this product is no longer available.\n\nBrowse all products with /start",
+          {
+            reply_markup: {
+              inline_keyboard: [[{ text: '🛍 Browse All Products', callback_data: 'browse' }]]
+            }
+          }
+        );
+        return;
+      }
+
+      const sData = Array.isArray(product.sellers) ? product.sellers[0] : product.sellers;
+      const shopName = sData?.shop_name || 'Crevis Store';
+      const caption = `*${product.name}*\n₹${product.price.toLocaleString('en-IN')}\n\n${product.description || ''}\n\nFrom *${shopName}*${product.boosted ? ' 🚀' : ''}`;
+
+      await ctx.replyWithPhoto(product.photo_url, {
+        caption,
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: `💳 Buy Now — ₹${product.price.toLocaleString('en-IN')}`, callback_data: `buy:${product.id}` }],
+            [{ text: '🛍 Browse More', callback_data: 'browse' }]
+          ]
+        }
+      });
+      return;
+    }
+    // ── End product deep link ────────────────────────────────────────────
+
     await sendMainMenu(ctx, false);
   } catch (error) {
     console.error("Start command error:", error);
     await ctx.reply("Failed to initialize your account. Please try again.");
   }
 });
+
 
 bot.action('main_menu', async (ctx) => {
   try {
