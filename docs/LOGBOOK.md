@@ -230,3 +230,44 @@ Created `app/not-found.tsx` — shown when the redirect route gets an invalid or
 - Example: `https://crevis-v2.vercel.app/p/10507609-2c84-444d-90f3-83b99470941f`
 ---
 
+### Session 8.3.1 — April 7, 2026 — Shop Slugs + Store Pages
+
+**Status:** ✅ Completed
+
+**What was built:**
+
+**Step 1 — DB migration** (`add_shop_slug`)
+- Added `shop_slug text UNIQUE` column to `sellers` table with unique index `idx_sellers_shop_slug`.
+- Created `generate_shop_slug(shop_name text)` PL/pgSQL function — normalises name to kebab-case, de-duplicates with numeric suffix.
+- Backfilled all existing sellers: `bombay-curations`, `style-maxx` confirmed via SQL.
+- Updated `types/database.types.ts` — added `shop_slug: string | null` to sellers Row/Insert/Update + `generate_shop_slug` to Functions.
+
+**Step 2 — `/s/[shopSlug]/route.ts`**
+Redirect route: looks up `sellers` by `shop_slug`, returns `/not-found` if missing, else 302 → `https://t.me/Crevis_shop_bot?start=store_<slug>` (bot can handle `store_*` in a future session).
+
+**Step 3 — Settings page — Shop Link section**
+Rewrote `settings/page.tsx`. New "Shop Link" section at top:
+- Read-only view: full link with Copy + Edit (pencil) buttons.
+- Edit mode: inline input pre-filled with current slug, forced lowercase, hyphens only. Debounced 500ms availability check via Supabase `.maybeSingle()`. Live indicators: spinner → green check (available) / red X (taken). Validation: 3–30 chars, `^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$`, no leading/trailing hyphens. Save → UPDATE sellers SET shop_slug. Cancel reverts.
+
+**Step 4 — Dashboard shop card**
+Inserted above the stats grid in `dashboard/page.tsx`:
+- Store icon + shop name + "Your store" label.
+- Two copyable rows: shop link (`/s/{slug}`) and `@Crevis_shop_bot`.
+- `handleCopyDashboard` uses `document.getElementById` to give inline "Copied!" feedback without a toast import.
+- Card only renders after load and when `shop_slug` is set.
+
+**Decisions made:**
+- Slug stored as `text UNIQUE` not `text NOT NULL` — sellers created before this migration get slugs on backfill; future onboarding will auto-assign on registration.
+- Bot `store_*` deep link handler deferred — noted for a future session when store browse by slug is implemented.
+- Dashboard copy uses inline DOM mutation instead of toast for zero-import cost on that component.
+
+**Build:** 40 pages, exit 0 / `npx tsc --noEmit`: clean
+
+**Environment state:**
+- Vercel: ✅ Deployed (commit cbd2f2b)
+- Shop link format: `https://crevis-v2.vercel.app/s/<slug>`
+- Bombay Curations: `https://crevis-v2.vercel.app/s/bombay-curations`
+---
+
+
