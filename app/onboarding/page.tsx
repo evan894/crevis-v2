@@ -102,6 +102,10 @@ function OnboardingContent() {
       
       setNewBalance(data.newBalance);
       setRedeemSuccess(true);
+      
+      // Auto-generate QR code
+      fetch("/api/store/generate-qr", { method: "POST" }).catch(console.error);
+      
       confetti({
         particleCount: 150,
         spread: 80,

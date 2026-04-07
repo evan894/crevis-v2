@@ -5,6 +5,7 @@ import path from 'path';
 
 // For typing
 import type { Database } from '../types/database.types';
+import { buildProductQuery } from './utils/queries';
 
 // Load variables from .env.local for local development
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -22,6 +23,8 @@ interface SessionData {
   category?: string;
   offset?: number;
   searchState?: string;
+  storeContext?: string | null;
+  storeContextName?: string | null;
 }
 
 export interface BotContext extends Context {
@@ -42,7 +45,8 @@ bot.catch((err, ctx) => {
 
 // Helper to provide main menu cleanly
 const sendMainMenu = async (ctx: BotContext, edit = false) => {
-  const text = `Welcome to Crevis, ${ctx.from?.first_name || 'Buyer'}! 🛍️\n\nWhat would you like to do?`;
+  const storeLabel = ctx.session?.storeContextName ? `\n\nYou're browsing ${ctx.session.storeContextName}'s collection.` : '';
+  const text = `Welcome to Crevis, ${ctx.from?.first_name || 'Buyer'}! 🛍️${storeLabel}\n\nWhat would you like to do?`;
   const markup = {
     inline_keyboard: [
       [{ text: '🛍 Browse Products', callback_data: 'browse' }],
@@ -75,51 +79,86 @@ bot.start(async (ctx) => {
       });
     }
 
-    if (ctx.session) ctx.session = { category: undefined, offset: undefined, searchState: undefined }; 
-    else (ctx.session as SessionData) = { category: undefined, offset: undefined, searchState: undefined };
+    if (ctx.session) ctx.session = { category: undefined, offset: undefined, searchState: undefined, storeContext: undefined, storeContextName: undefined }; 
+    else (ctx.session as SessionData) = { category: undefined, offset: undefined, searchState: undefined, storeContext: undefined, storeContextName: undefined };
 
-    // ── Product deep link: /start product_<uuid> ────────────────────────
     const payload = ctx.startPayload;
-    if (payload && payload.startsWith('product_')) {
-      const productId = payload.replace('product_', '');
+    if (payload) {
+      if (payload.startsWith('product_')) {
+        const productId = payload.replace('product_', '');
 
-      const { data: product } = await supabase
-        .from('products')
-        .select('*, sellers(shop_name)')
-        .eq('id', productId)
-        .eq('active', true)
-        .single();
+        const { data: product } = await supabase
+          .from('products')
+          .select('*, sellers(shop_name, id)')
+          .eq('id', productId)
+          .eq('active', true)
+          .single();
 
-      if (!product) {
-        await ctx.reply(
-          "Sorry, this product is no longer available.\n\nBrowse all products with /start",
-          {
-            reply_markup: {
-              inline_keyboard: [[{ text: '🛍 Browse All Products', callback_data: 'browse' }]]
+        if (!product) {
+          await ctx.reply(
+            "Sorry, this product is no longer available.\n\nBrowse all products with /start",
+            {
+              reply_markup: { inline_keyboard: [[{ text: '🛍 Browse All Products', callback_data: 'browse' }]] }
             }
+          );
+          return;
+        }
+
+        const sData = Array.isArray(product.sellers) ? product.sellers[0] : product.sellers;
+        const shopName = sData?.shop_name || 'Crevis Store';
+        
+        ctx.session.storeContext = product.seller_id;
+        ctx.session.storeContextName = shopName;
+
+        const caption = `*${product.name}*\n₹${product.price.toLocaleString('en-IN')}\n\n${product.description || ''}\n\nFrom *${shopName}*${product.boosted ? ' 🚀' : ''}`;
+
+        await ctx.replyWithPhoto(product.photo_url, {
+          caption,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: `💳 Buy Now — ₹${product.price.toLocaleString('en-IN')}`, callback_data: `buy:${product.id}` }],
+              [{ text: '🛍 Browse More', callback_data: 'browse' }]
+            ]
           }
-        );
+        });
         return;
       }
 
-      const sData = Array.isArray(product.sellers) ? product.sellers[0] : product.sellers;
-      const shopName = sData?.shop_name || 'Crevis Store';
-      const caption = `*${product.name}*\n₹${product.price.toLocaleString('en-IN')}\n\n${product.description || ''}\n\nFrom *${shopName}*${product.boosted ? ' 🚀' : ''}`;
+      if (payload.startsWith('store_')) {
+        const shopSlug = payload.replace('store_', '');
 
-      await ctx.replyWithPhoto(product.photo_url, {
-        caption,
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: `💳 Buy Now — ₹${product.price.toLocaleString('en-IN')}`, callback_data: `buy:${product.id}` }],
-            [{ text: '🛍 Browse More', callback_data: 'browse' }]
-          ]
+        const { data: seller } = await supabase
+          .from('sellers')
+          .select('id, shop_name')
+          .eq('shop_slug', shopSlug)
+          .single();
+
+        if (seller) {
+          ctx.session.storeContext = seller.id;
+          ctx.session.storeContextName = seller.shop_name;
+
+          await ctx.reply(
+            `👋 Welcome to ${seller.shop_name} on Crevis!\n` +
+            `You're browsing ${seller.shop_name}'s collection.\n\n` +
+            `What would you like to do?`,
+            { 
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '🛍 Browse Products', callback_data: 'browse' }],
+                  [{ text: '🔍 Search', callback_data: 'search' }],
+                  [{ text: '📦 My Orders', callback_data: 'orders' }]
+                ]
+              }
+            }
+          );
+          return;
         }
-      });
-      return;
+      }
     }
-    // ── End product deep link ────────────────────────────────────────────
 
+    ctx.session.storeContext = null;
+    ctx.session.storeContextName = null;
     await sendMainMenu(ctx, false);
   } catch (error) {
     console.error("Start command error:", error);
@@ -147,7 +186,11 @@ bot.action('browse', async (ctx) => {
        ctx.session.category = undefined;
     }
     
-    await ctx.editMessageText('Select a category to browse:', {
+    const storeLabel = ctx.session?.storeContextName 
+      ? ` from ${ctx.session.storeContextName}` 
+      : '';
+
+    await ctx.editMessageText(`Select a category to browse${storeLabel}:`, {
       reply_markup: {
         inline_keyboard: [
           ...CATEGORIES.map(c => [{ text: c, callback_data: `category:${c}` }]),
@@ -247,7 +290,11 @@ bot.action('search', async (ctx) => {
     ctx.session.category = undefined;
     ctx.session.searchState = "AWAITING_QUERY";
     
-    await ctx.editMessageText("What are you looking for?", {
+    const storeLabel = ctx.session?.storeContextName 
+      ? `Search ${ctx.session.storeContextName}'s collection:` 
+      : 'What are you looking for?';
+
+    await ctx.editMessageText(storeLabel, {
       reply_markup: {
         inline_keyboard: [[{ text: '⬅ Cancel', callback_data: 'main_menu' }]]
       }
@@ -268,10 +315,16 @@ bot.on('text', async (ctx) => {
 
       try {
          // Fetch all active products for the AI / fallback
-         const { data: allActiveProducts } = await supabase
+         let activeProductsQuery = supabase
             .from('products')
             .select('id, name, description, category, price')
             .eq('active', true);
+
+         if (ctx.session?.storeContext) {
+            activeProductsQuery = activeProductsQuery.eq('seller_id', ctx.session.storeContext);
+         }
+
+         const { data: allActiveProducts } = await activeProductsQuery;
 
          if (!allActiveProducts || allActiveProducts.length === 0) {
             await ctx.telegram.editMessageText(ctx.chat.id, sentMsg.message_id, undefined, "Couldn't find that. Try browsing by category.", {
@@ -309,11 +362,8 @@ bot.on('text', async (ctx) => {
          }
 
          // Fetch full product details
-         const { data: matchedProducts } = await supabase
-            .from('products')
-            .select('*, sellers(shop_name)')
-            .in('id', matchedIds)
-            .eq('active', true);
+         const { data: matchedProducts } = await buildProductQuery(supabase, ctx.session?.storeContext || null)
+            .in('id', matchedIds);
          
          await ctx.telegram.deleteMessage(ctx.chat.id, sentMsg.message_id).catch(()=>{});
 
@@ -406,13 +456,8 @@ bot.action(/buy:(.+)/, async (ctx) => {
 
 
 async function sendProducts(ctx: BotContext, category: string, offset: number) {
-  const { data: products, error } = await supabase
-    .from('products')
-    .select('*, sellers(shop_name)')
+  const { data: products, error } = await buildProductQuery(supabase, ctx.session?.storeContext || null)
     .eq('category', category)
-    .eq('active', true)
-    .order('boosted', { ascending: false })
-    .order('created_at', { ascending: false })
     .range(offset, offset + 4);
 
   if (error) {
@@ -421,11 +466,17 @@ async function sendProducts(ctx: BotContext, category: string, offset: number) {
     return;
   }
 
-  const { count } = await supabase
+  let countQuery = supabase
     .from('products')
     .select('*', { count: 'exact', head: true })
     .eq('category', category)
     .eq('active', true);
+  
+  if (ctx.session?.storeContext) {
+    countQuery = countQuery.eq('seller_id', ctx.session.storeContext);
+  }
+
+  const { count } = await countQuery;
   
   if (!products || products.length === 0) {
      if (offset === 0) {

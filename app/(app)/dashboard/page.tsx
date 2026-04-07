@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@/lib/supabase";
-import { ShoppingBag, Wallet, PackageOpen, TrendingUp, AlertTriangle, X, MessageSquare, Users, Link2, Copy, Store } from "lucide-react";
+import { ShoppingBag, Wallet, PackageOpen, TrendingUp, AlertTriangle, X, MessageSquare, Users, Link2, Copy, Store, QrCode, Download, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -85,6 +85,9 @@ export default function DashboardPage() {
   const [slackConnected, setSlackConnected] = useState(false);
   const [isOwnerOrManager, setIsOwnerOrManager] = useState(false);
   const [shopSlug, setShopSlug] = useState<string>("");
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [isGeneratingQr, setIsGeneratingQr] = useState(false);
 
   const [stats, setStats] = useState({
      shopName: "",
@@ -184,12 +187,13 @@ export default function DashboardPage() {
 
        const { data: seller } = await supabase
          .from("sellers")
-         .select("id, shop_name, shop_slug, credit_balance, slack_user_id")
+         .select("id, shop_name, shop_slug, credit_balance, slack_user_id, qr_code_url")
          .eq("user_id", user.id)
          .single();
        if (!seller) return;
 
        setShopSlug(seller.shop_slug || "");
+       setQrCodeUrl(seller.qr_code_url || null);
 
        setSellerId(seller.id);
        setSlackConnected(!!seller.slack_user_id);
@@ -277,14 +281,42 @@ export default function DashboardPage() {
      setShowCreditWarning(false);
   };
 
-  const handleCopyDashboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text)
-      .then(() => {
-        // Simple inline alert — no toast dependency needed here
-        const btn = document.getElementById(`copy-${label}`);
-        if (btn) { btn.textContent = "Copied!"; setTimeout(() => { btn.textContent = "Copy"; }, 1500); }
-      })
-      .catch(() => {});
+  const handleCopyDashboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    const btn = document.getElementById(`copy-${id}`);
+    if (btn) {
+      const original = btn.innerHTML;
+      btn.innerHTML = `<span class="flex items-center gap-1"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied</span>`;
+      btn.classList.add("text-success");
+      setTimeout(() => {
+         btn.innerHTML = original;
+         btn.classList.remove("text-success");
+      }, 2000);
+    }
+  };
+
+  const handleDownloadQr = () => {
+    if (!qrCodeUrl) return;
+    const a = document.createElement("a");
+    a.href = qrCodeUrl;
+    a.download = `${shopSlug}-qr.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleRegenerateQr = async () => {
+    setIsGeneratingQr(true);
+    try {
+      const res = await fetch("/api/store/generate-qr", { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to regenerate QR");
+      setQrCodeUrl(data.qrUrl);
+    } catch (err: unknown) {
+       console.error(err);
+    } finally {
+      setIsGeneratingQr(false);
+    }
   };
 
   const hour = new Date().getHours();
@@ -371,13 +403,21 @@ export default function DashboardPage() {
                  <span className="font-dm-sans text-xs text-ink truncate flex-1">
                    {(process.env.NEXT_PUBLIC_APP_URL || "https://crevis-v2.vercel.app")}/s/{shopSlug}
                  </span>
-                 <button
-                   id="copy-shoplink"
-                   onClick={() => handleCopyDashboard(`${process.env.NEXT_PUBLIC_APP_URL || "https://crevis-v2.vercel.app"}/s/${shopSlug}`, "shoplink")}
-                   className="shrink-0 text-[11px] font-medium text-ink-secondary hover:text-saffron transition-colors flex items-center gap-1"
-                 >
-                   <Copy className="w-3 h-3" /> Copy
-                 </button>
+                 <div className="flex items-center gap-2 shrink-0 border-l border-border pl-2 ml-1">
+                    <button
+                      id="copy-shoplink"
+                      onClick={() => handleCopyDashboard(`${process.env.NEXT_PUBLIC_APP_URL || "https://crevis-v2.vercel.app"}/s/${shopSlug}`, "shoplink")}
+                      className="text-[11px] font-medium text-ink-secondary hover:text-saffron transition-colors flex items-center gap-1"
+                    >
+                      <Copy className="w-3 h-3" /> Copy
+                    </button>
+                    <button
+                      onClick={() => setIsQrModalOpen(true)}
+                      className="text-[11px] font-medium text-ink-secondary hover:text-saffron transition-colors flex items-center gap-1"
+                    >
+                      <QrCode className="w-3 h-3" /> QR
+                    </button>
+                 </div>
                </div>
                {/* Bot handle row */}
                <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2">
@@ -559,6 +599,63 @@ export default function DashboardPage() {
          )}
 
       </div>
+
+      {/* QR Code Modal */}
+      {isQrModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm">
+          <div className="bg-surface-raised w-full max-w-sm rounded-xl shadow-lg border border-border flex flex-col p-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-syne font-bold text-lg text-ink flex items-center gap-2">
+                <QrCode className="w-5 h-5 text-saffron" />
+                Store QR Code
+              </h3>
+              <button 
+                onClick={() => setIsQrModalOpen(false)}
+                className="text-ink-muted hover:text-ink transition-colors"
+                title="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex flex-col items-center gap-6">
+              <div className="bg-white p-4 rounded-xl border border-border w-full flex items-center justify-center min-h-[280px]">
+                {qrCodeUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={`${qrCodeUrl}?t=${Date.now()}`} alt="Store QR Code" className="w-64 h-64 select-none pointer-events-none" />
+                ) : (
+                  <div className="text-center text-ink-muted flex flex-col items-center gap-2">
+                    <QrCode className="w-10 h-10 opacity-20" />
+                    <p className="text-sm font-medium">QR not generated yet</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-3 w-full">
+                <button
+                  onClick={handleDownloadQr}
+                  disabled={!qrCodeUrl || isGeneratingQr}
+                  className="w-full h-11 bg-ink text-surface-raised font-bold text-sm rounded flex items-center justify-center gap-2 hover:bg-ink-secondary active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100"
+                >
+                  <Download className="w-4 h-4" /> Download QR 
+                </button>
+                <button
+                  onClick={handleRegenerateQr}
+                  disabled={isGeneratingQr}
+                  className="w-full h-11 bg-surface border border-border text-ink font-bold text-sm rounded flex items-center justify-center gap-2 hover:bg-surface-raised active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isGeneratingQr ? "animate-spin" : ""}`} /> 
+                  {isGeneratingQr ? "Regenerating..." : "Regenerate QR"}
+                </button>
+              </div>
+
+              <p className="text-xs text-ink-muted text-center leading-relaxed">
+                <strong className="text-ink-secondary">Warning:</strong> Regenerating will invalidate any previously printed QR codes for this store.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

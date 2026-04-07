@@ -270,4 +270,37 @@ Inserted above the stats grid in `dashboard/page.tsx`:
 - Bombay Curations: `https://crevis-v2.vercel.app/s/bombay-curations`
 ---
 
+### Session 8.3.2 — April 7, 2026 — Branded QR Code Generation
 
+**Status:** ✅ Completed
+
+**What was built:**
+
+**Step 1 — Storage & DB Prep**
+- Created `qr-codes` public bucket in Supabase.
+- Added `qr_code_url text` column to the `sellers` table, added type definition updates to `database.types.ts`.
+
+**Step 2 — QR Generator Utility (`lib/qr.ts`)**
+- Created server-side QR generator using `qrcode` and `sharp`.
+- Process: Generates a saffron (#F4631E) dotted QR code on white. Uses `sharp` to composite a pre-designed Crevis C logo perfectly in the center. Uploads directly to Supabase storage mapping to the `shop_slug.png`. Returns the permanent public URL.
+
+**Step 3 — API Route (`/api/store/generate-qr`)**
+- `POST`: Pulls auth, generates the QR via `generateStoreQR`, saves the URL, and caches.
+- `DELETE`: Clears the cache, removes the existing image, and forces a regeneration.
+
+**Step 4 — Onboarding Injection**
+- Updated `app/onboarding/page.tsx` step 3 to fire off the `generate-qr` POST request silently in the background when the user completes sign up.
+
+**Step 5 — Dashboard QR View Modal**
+- Created an elegant modal in the `dashboard` UI showing the generated QR code.
+- Features `Download` and `Regenerate` controls.
+- Shows dynamic status states (Generating, caching).
+
+**Build:** clean exit 0 on `npm run build` with full TypeScript passes.
+
+**Decisions made:**
+- Used `@supabase/ssr` `createServerClient` in API routes for auth parsing rather than helpers, matching project standard.
+- The logo is pulled directly from the local file system `public/crevis-logo-qr.png` bypassing slower native HTTP fetches for sharp composite ops.
+
+**Environment state:**
+- Vercel: ✅ Ready for deployment.

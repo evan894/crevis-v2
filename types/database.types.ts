@@ -418,6 +418,7 @@ export type Database = {
           created_at: string
           credit_balance: number
           id: string
+          qr_code_url: string | null
           shop_name: string
           shop_slug: string | null
           slack_access_token: string | null
@@ -429,6 +430,7 @@ export type Database = {
           created_at?: string
           credit_balance?: number
           id?: string
+          qr_code_url?: string | null
           shop_name: string
           shop_slug?: string | null
           slack_access_token?: string | null
@@ -440,6 +442,7 @@ export type Database = {
           created_at?: string
           credit_balance?: number
           id?: string
+          qr_code_url?: string | null
           shop_name?: string
           shop_slug?: string | null
           slack_access_token?: string | null
