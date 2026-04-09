@@ -27,6 +27,15 @@ create table sellers (
   slack_user_id       text default null,
   slack_access_token  text default null,
   credit_balance      integer not null default 0,
+  earned_credits      integer not null default 0,
+  promo_credits       integer not null default 0,
+  grace_period_started_at timestamptz default null,
+  deactivated         boolean not null default false,
+  deactivated_at      timestamptz default null,
+  deactivated_snapshot jsonb default null,
+  unlist_duration_days integer not null default 7,
+  shop_slug           text unique,
+  qr_code_url         text default null,
   created_at          timestamptz not null default now()
 );
 ```
@@ -47,6 +56,10 @@ create table products (
   category     text not null,
   boosted      boolean not null default false,
   active       boolean not null default true,
+  unlisted_at  timestamptz default null,
+  scheduled_delete_at timestamptz default null,
+  has_variants boolean not null default false,
+  variants     jsonb default null,
   created_at   timestamptz not null default now()
 );
 ```
@@ -69,6 +82,13 @@ create table orders (
   status               text not null default 'pending'
                          check (status in ('pending', 'completed', 'failed')),
   razorpay_payment_id  text default null,
+  return_window_closes_at timestamptz default null,
+  credits_released     boolean not null default false,
+  credits_released_at  timestamptz default null,
+  return_requested     boolean not null default false,
+  return_requested_at  timestamptz default null,
+  return_reason        text default null,
+  selected_variant     jsonb default null,
   created_at           timestamptz not null default now()
 );
 ```
@@ -95,6 +115,7 @@ create table credit_ledger (
   order_value    numeric(10, 2) default null,
   order_id       uuid references orders(id) on delete set null default null,
   note           text default null,
+  credit_type    text not null default 'any' check (credit_type in ('earned', 'promo', 'any')),
   created_at     timestamptz not null default now()
 );
 ```
@@ -197,7 +218,8 @@ create or replace function deduct_credits(
   p_action       text,
   p_order_value  numeric default null,
   p_order_id     uuid default null,
-  p_note         text default null
+  p_note         text default null,
+  p_credit_type  text default 'any'
 )
 returns integer
 language plpgsql
@@ -212,23 +234,14 @@ begin
   where id = p_seller_id
   for update;
 
-  -- Check sufficient balance
-  if v_new_balance < p_amount then
-    raise exception 'Insufficient credits. Balance: %, Required: %',
-      v_new_balance, p_amount;
-  end if;
-
-  -- Deduct balance
-  update sellers
-  set credit_balance = credit_balance - p_amount
-  where id = p_seller_id
-  returning credit_balance into v_new_balance;
-
+  -- Logic to deduct from earned/promo pools first if p_credit_type matches
+  -- ... (simplified for documentation)
+  
   -- Log to ledger
   insert into credit_ledger (
-    seller_id, action, credits_delta, order_value, order_id, note
+    seller_id, action, credits_delta, order_value, order_id, note, credit_type
   ) values (
-    p_seller_id, p_action, -p_amount, p_order_value, p_order_id, p_note
+    p_seller_id, p_action, -p_amount, p_order_value, p_order_id, p_note, p_credit_type
   );
 
   return v_new_balance;
@@ -247,7 +260,8 @@ create or replace function add_credits(
   p_seller_id  uuid,
   p_amount     integer,
   p_action     text,
-  p_note       text default null
+  p_note       text default null,
+  p_credit_type text default 'promo'
 )
 returns integer
 language plpgsql
@@ -256,15 +270,19 @@ as $$
 declare
   v_new_balance integer;
 begin
+  -- Update credit pools and total balance
   update sellers
-  set credit_balance = credit_balance + p_amount
+  set 
+    credit_balance = credit_balance + p_amount,
+    earned_credits = earned_credits + case when p_credit_type = 'earned' then p_amount else 0 end,
+    promo_credits = promo_credits + case when p_credit_type = 'promo' then p_amount else 0 end
   where id = p_seller_id
   returning credit_balance into v_new_balance;
 
   insert into credit_ledger (
-    seller_id, action, credits_delta, note
+    seller_id, action, credits_delta, note, credit_type
   ) values (
-    p_seller_id, p_action, p_amount, p_note
+    p_seller_id, p_action, p_amount, p_note, p_credit_type
   );
 
   return v_new_balance;
@@ -539,6 +557,101 @@ values ('CREVIS100', 100, null, true);
 --    '<photo_url>', 899.00, 'Footwear', false, true),
 --   ('<seller_id>', 'Cotton Bed Sheet Set', 'Double bed, 300 thread count',
 --    '<photo_url>', 1199.00, 'Home Textiles', false, true);
+```
+
+---
+
+### store_members
+Maps users to sellers with specific roles.
+```sql
+create table store_members (
+  id          uuid primary key default gen_random_uuid(),
+  seller_id   uuid references sellers(id) on delete cascade not null,
+  user_id     uuid references auth.users(id) on delete cascade not null,
+  role        text not null check (role in ('owner', 'manager', 'sales_agent', 'delivery_agent', 'custom')),
+  custom_role_id uuid references custom_roles(id) on delete set null,
+  is_active   boolean not null default true,
+  created_at  timestamptz not null default now(),
+  unique(seller_id, user_id)
+);
+```
+
+---
+
+### custom_roles
+Seller-defined roles with granular permissions.
+```sql
+create table custom_roles (
+  id          uuid primary key default gen_random_uuid(),
+  seller_id   uuid references sellers(id) on delete cascade not null,
+  name        text not null,
+  permissions text[] not null default '{}',
+  created_at  timestamptz not null default now()
+);
+```
+
+---
+
+### delivery_orders
+Operational tracking for agent dashboard.
+```sql
+create table delivery_orders (
+  id                uuid primary key default gen_random_uuid(),
+  order_id          uuid references orders(id) on delete cascade not null unique,
+  seller_id         uuid references sellers(id) on delete cascade not null,
+  status            text not null default 'pending'
+                      check (status in ('pending', 'confirmed', 'packed', 'out_for_delivery', 'delivered', 'failed')),
+  sales_agent_id    uuid references auth.users(id),
+  delivery_agent_id uuid references auth.users(id),
+  otp_code          text default null,
+  otp_expires_at    timestamptz default null,
+  otp_attempts      integer not null default 0,
+  packed_at         timestamptz default null,
+  delivered_at      timestamptz default null,
+  failed_at         timestamptz default null,
+  failure_reason    text default null,
+  failure_notes     text default null,
+  created_at        timestamptz not null default now()
+);
+```
+
+---
+
+### seller_bank_accounts
+Bank details for payouts (Owner-only RLS).
+```sql
+create table seller_bank_accounts (
+  id uuid primary key default gen_random_uuid(),
+  seller_id uuid references sellers(id) on delete cascade not null unique,
+  account_holder_name text not null,
+  account_number text not null,
+  ifsc_code text not null,
+  account_type text not null check (account_type in ('savings', 'current')),
+  bank_name text default null,
+  verified boolean not null default false,
+  razorpay_fund_account_id text default null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+```
+
+---
+
+### withdrawals
+Tracking payout requests.
+```sql
+create table withdrawals (
+  id uuid primary key default gen_random_uuid(),
+  seller_id uuid references sellers(id) on delete cascade not null,
+  amount_credits integer not null,
+  amount_inr numeric(10,2) not null,
+  status text not null default 'pending'
+    check (status in ('pending', 'processing', 'completed', 'failed')),
+  razorpay_payout_id text default null,
+  failure_reason text default null,
+  created_at timestamptz not null default now(),
+  completed_at timestamptz default null
+);
 ```
 
 ---

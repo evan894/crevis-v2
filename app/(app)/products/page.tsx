@@ -63,11 +63,12 @@ export default function ProductsPage() {
     setActionLoading(id);
     try {
       const res = await fetch(`/api/products/${id}/toggle-active`, { method: "POST" });
-      if (!res.ok) throw new Error("Failed to toggle");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to toggle");
       setProducts(products.map(p => p.id === id ? { ...p, active: !currentActive } : p));
       toast.success(currentActive ? "Product deactivated" : "Product activated");
-    } catch {
-      toast.error("Failed to update status");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to update status");
     } finally {
       setActionLoading(null);
       setMenuOpen(null);
@@ -79,11 +80,12 @@ export default function ProductsPage() {
     setActionLoading(id);
     try {
       const res = await fetch(`/api/products/${id}/delete`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to delete");
       setProducts(products.filter(p => p.id !== id));
       toast.success("Product deleted");
-    } catch {
-      toast.error("Failed to delete product");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete product");
     } finally {
       setActionLoading(null);
       setMenuOpen(null);
@@ -215,10 +217,14 @@ export default function ProductsPage() {
                 {/* Image Section */}
                 <div className="aspect-[4/3] bg-surface relative overflow-hidden">
                   <Image 
-                    src={product.photo_url} 
+                    src={product.photo_url || "/placeholder.png"} 
                     alt={product.name}
                     fill
                     className={`object-cover transition-transform duration-slow ${!product.active && 'grayscale opacity-70'} group-hover:scale-105`}
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      img.src = "https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=40";
+                    }}
                   />
                   
                   {/* Badges */}

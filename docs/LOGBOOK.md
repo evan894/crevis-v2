@@ -5,12 +5,12 @@
 ## Quick State (Updated After Every Session)
 
 ```
-Last completed:  Session R6 — Integration Audit + Demo Prep
+Last completed:  Session 12.1.1 — Sales Dashboard Basics
 Production URL:  https://crevis-v2.vercel.app
 Preview URL:     https://crevis-v2-git-preview-m3-demo-evan-1695s-projects.vercel.app
 Telegram bot:    @Crevis_shop_bot
-All sessions:    R1–R6 ✅ Complete
-Next action:     Manual e2e testing + DTI demo deliverables
+All sessions:    Phase 1–11 ✅ Complete (R1–11.3.1), Phase 12 📈 (In Progress)
+Next action:     Phase 12.1.2 — Customer Insights & Trends
 Demo date:       [DATE]
 Open bugs:       None known
 
@@ -33,10 +33,10 @@ Production URL:   https://crevis-v2.vercel.app
 Supabase project: kykzwnghijedbjhdinlq
 Telegram bot:     @Crevis_shop_bot
 Razorpay mode:    TEST
-Current phase:    Phase 7 Complete — all planned sessions done
-Current session:  R6 Complete
-Hours spent:      ~18 (estimate across 6 days)
-Hours remaining:  Manual testing + demo prep only
+Current phase:    Phase 12 (In Progress)
+Current session:  12.1.1 Complete
+Hours spent:      ~27 (estimate)
+Hours remaining:  Phase 12 — Analytics (In Progress)
 ```
 
 ---
@@ -55,6 +55,10 @@ Hours remaining:  Manual testing + demo prep only
 | 2 | Agent "New" tab always empty post-R5 | Filter includes `delivery.status === 'pending'` | Apr 7 | R6 |
 | 3 | Permission key mismatch (`update_delivery_status` vs `update_delivery`) | Aligned key in team page + added `manage_settings` | Apr 7 | R6 |
 | 4 | Out-of-stock action left `stock` non-zero | Now updates `{ active: false, stock: 0 }` | Apr 7 | R6 |
+| 11.1.1 | 2-Day Return Window | Hold earnings; release via cron; return request UI | Apr 7 | Phase 11 |
+| 11.2.1 | Bank Account Mgmt | verified status via Razorpay penny drop; lookup IFSC | Apr 7 | Phase 11 |
+| 11.2.2 | Credit Withdrawal | Transfer earned credits to bank; Razorpay IMPS | Apr 7 | Phase 11 |
+| 11.3.1 | Payout Webhooks | update withdrawal status + notify via Slack | Apr 7 | Phase 11 |
 
 ---
 
@@ -430,6 +434,22 @@ Inserted above the stats grid in `dashboard/page.tsx`:
 **Environment state:**
 - Vercel: ✅ Pushed & Deployed
 - Typecheck & Build: ✅ Built cleanly.
+
+---
+
+### Session 11.2.2 — Credit Withdrawal
+**Completed:** Yes
+**Steps Taken:**
+1. Applied migration `0016_withdrawals.sql` — `withdrawals` table with RLS (owner-only).
+2. Applied migration `0017_deduct_credits_with_type.sql` — extended `deduct_credits` RPC with `p_credit_type` param to allow deducting specifically from `earned_credits` pool.
+3. Updated `lib/credits.ts` — added `withdrawal` action, added `creditType` optional param to `deductCredits()`.
+4. Updated `types/database.types.ts` — added `withdrawals` table types + `p_credit_type` to `deduct_credits` args.
+5. Created `app/api/wallet/withdraw/route.ts` — validates owner, earned credit balance, verified bank account, minimum ₹100. Deducts earned credits → triggers Razorpay Payouts API (IMPS) → records withdrawal → Slack DM.
+6. Updated `app/(app)/wallet/page.tsx`:
+   - Smarter `fetchWalletData` for member/owner roles, fetches bank account and withdrawal history.
+   - "Withdraw →" button on earned credits card with contextual disabled state (no bank, unverified, < ₹100).
+   - Withdrawal modal: amount input, bank account preview, "= X credits deducted" hint, IMPS notice.
+   - Withdrawal history table below ledger: Date | Amount | Status badge | Razorpay reference.
 
 ---
 

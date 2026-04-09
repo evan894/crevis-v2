@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database.types';
 import { deductCredits, deactivateSellerListings } from '@/lib/credits';
@@ -14,6 +13,8 @@ const supabase = createClient<Database>(
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
 
+import { validateWebhookSignature } from 'razorpay/dist/utils/razorpay-utils';
+
 export async function POST(req: Request) {
   try {
     const rawBody = await req.text();
@@ -21,12 +22,19 @@ export async function POST(req: Request) {
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET!;
 
     if (!signature) {
-      return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
+      console.error('[Razorpay Orders Webhook] Missing signature');
+      return NextResponse.json({ received: true });
     }
 
-    const expectedSignature = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
-    if (expectedSignature !== signature) {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+    try {
+      const isValid = validateWebhookSignature(rawBody, signature, secret);
+      if (!isValid) {
+        console.error('[Razorpay Orders Webhook] Signature mismatch');
+        return NextResponse.json({ received: true });
+      }
+    } catch (err) {
+      console.error('[Razorpay Orders Webhook] Signature verification failed', err);
+      return NextResponse.json({ received: true });
     }
 
     const event = JSON.parse(rawBody);

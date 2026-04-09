@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { deductCredits, deactivateSellerListings } from "@/lib/credits";
+import { requirePermission } from "@/lib/roles";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { sendSlackDM } from "@/lib/slack";
 import type { Database } from "@/types/database.types";
@@ -23,7 +24,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { data: seller } = await supabase.from("sellers").select("id, slack_access_token, slack_user_id, credit_balance").eq("user_id", user.id).single();
+    // Use permission system instead of direct seller lookup
+    let ctx;
+    try {
+      ctx = await requirePermission(user.id, 'manage_products');
+    } catch (err) {
+      return NextResponse.json({ error: err instanceof Error ? err.message : "Permission denied" }, { status: 403 });
+    }
+
+    const { data: seller } = await supabaseAdmin.from("sellers").select("id, slack_access_token, slack_user_id, credit_balance").eq("id", ctx.sellerId).single();
     if (!seller) return NextResponse.json({ error: "Seller profile not found" }, { status: 404 });
 
     if (seller.credit_balance < CREDIT_LOW_THRESHOLD) {
@@ -34,7 +43,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const { data: product } = await supabaseAdmin.from("products").select("id, seller_id, boosted").eq("id", params.id).single();
     
-    if (!product || product.seller_id !== seller.id) {
+    if (!product || product.seller_id !== ctx.sellerId) {
        return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
     if (product.boosted) {

@@ -90,6 +90,8 @@ export default function NewProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+    
     if (files.length === 0) return toast.error("At least one product image is required");
     if (!name.trim()) return toast.error("Product name is required");
     if (!price || isNaN(Number(price)) || Number(price) <= 0) return toast.error("Valid price is required");

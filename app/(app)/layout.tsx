@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, PackageOpen, ShoppingBag, Wallet, Settings, Users, CreditCard } from "lucide-react";
+import { LayoutDashboard, PackageOpen, ShoppingBag, Wallet, Settings, Users, CreditCard, TrendingUp } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Analytics", href: "/analytics", icon: TrendingUp },
     { name: "Products", href: "/products", icon: PackageOpen },
     { name: "Orders", href: "/orders", icon: ShoppingBag },
     { name: "Team", href: "/team", icon: Users },

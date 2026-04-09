@@ -713,3 +713,157 @@ Trigger: Supabase Storage upload throws an error.
 4. Show error: "Photo upload failed. Please try again."
 5. Form stays populated — seller does not lose their input
 6. Retry button available
+```
+
+---
+
+## 6. Advanced Seller & Financial Flows
+
+---
+
+### 6.1 Credits Separation (Earned vs Promo)
+
+Trigger: Any credit addition or deduction.
+
+```
+1. [DB] All additions specify credit_type ('earned' for sales, 'promo' for coupons/recharges).
+2. [DB] add_credits RPC updates sellers.earned_credits or promo_credits specifically.
+3. [DB] deduct_credits RPC handles 'any' type by deducting from promo first, then earned.
+4. [DB] deduct_credits RPC for withdrawals MUST specify 'earned' type (blocks promo).
+```
+
+---
+
+### 6.2 Grace Period & Auto-Deactivation
+
+Trigger: Credit balance goes negative.
+
+```
+1. [DB] In deduct_credits RPC: if balance < 0 and grace_period_started_at is null:
+   UPDATE sellers SET grace_period_started_at = now()
+2. [EXT] Vercel Cron runs daily (/api/cron/grace-period):
+   — Day 3: Send Slack warning "2 days remaining".
+   — Day 5: Send Slack warning "Final warning".
+   — Day 6: 
+     a. [DB] SELECT active products and save to deactivated_snapshot.
+     b. [DB] UPDATE products SET active = false.
+     c. [DB] UPDATE sellers SET deactivated = true, deactivated_at = now().
+     d. [EXT] Send Slack "Store paused" DM and notify Crevis Admin.
+3. Re-activation: 
+   — When balance >= 0:
+     a. [DB] Restore products from deactivated_snapshot.
+     b. [DB] Reset grace_period_started_at and deactivated fields.
+```
+
+---
+
+### 6.3 50 Credit Threshold Flow
+
+Trigger: Listing or Boosting a product.
+
+```
+1. [DB] Fetch seller.credit_balance.
+2. [GUARD] If balance < 50:
+   — Block "Publish" or "Boost" actions.
+   — Error: "Balance below 50. Top up to list/boost new items. Existing items stay active."
+3. [UI] Show "Low Balance" warning banner on Dashboard if balance < 100.
+```
+
+---
+
+### 6.4 Auto-Unlist & Scheduled Delete
+
+Trigger: Product stock reaches 0 or manual unlist.
+
+```
+1. [DB] UPDATE products SET unlisted_at = now().
+2. [DB] Calculate scheduled_delete_at = now() + (unlist_duration_days).
+3. [EXT] Vercel Cron runs daily:
+   — DELETE products where scheduled_delete_at < now().
+4. Exception: if unlist_duration_days = 0, product is never deleted.
+```
+
+---
+
+### 6.5 Size & Inventory Management
+
+Trigger: Product listing or update.
+
+```
+1. Seller toggles "This product has size variants".
+2. Seller defines options (e.g. S, M, L) and stock per option.
+3. [DB] Store in products.variants JSON.
+4. [DB] products.stock becomes total sum of all variant stocks.
+5. [DB] When an order is placed:
+   — Reduce stock of selected variant.
+   — Recalculate total stock.
+   — If total stock = 0, set product.active = false and unlisted_at = now().
+```
+
+---
+
+### 6.6 Category Qualifying Questions (Bot)
+
+Trigger: Buyer selects a category in Telegram bot.
+
+```
+1. Buyer selects "Clothing".
+2. Bot asks "What size?" (Buttons: XS, S, M, L, XL, XXL, Any).
+3. Bot asks "For whom?" (Buttons: Men, Women, Kids, Unisex, Any).
+4. Bot asks "Budget?" (Buttons based on category price points).
+5. [DB] Filter products matching category AND selected variant sizes AND gender AND price range.
+6. Display results.
+```
+
+---
+
+### 6.7 2-Day Return Window & Credit Release
+
+Trigger: Order payment captured.
+
+```
+1. [DB] UPDATE orders SET return_window_closes_at = now() + 2 days, credits_released = false.
+2. [EXT] Vercel Cron runs hourly (/api/cron/release-credits):
+   — Find orders where return_window_closes_at < now() AND credits_released = false.
+   — [DB] For each order:
+     a. Call add_credits(seller_id, order_net_amount, 'earned', 'Order payment release').
+     b. UPDATE orders SET credits_released = true, credits_released_at = now().
+3. Return process:
+   — Buyer requests return via bot.
+   — [DB] UPDATE orders SET return_requested = true, return_requested_at = now().
+   — Return window is frozen; credits are NOT released.
+   — Admin/Seller resolves return manually.
+```
+
+---
+
+### 6.8 Bank Account Management
+
+Trigger: Seller visits Wallet → Bank Details.
+
+```
+1. Seller enters: Holder Name, A/C Number, IFSC, Type.
+2. [EXT] Validate IFSC via Razorpay API.
+3. [EXT] Penny Drop Verification:
+   — Create Razorpay Contact.
+   — Create Fund Account.
+   — Trigger "Penny Drop" (₹1 withdrawal).
+4. [DB] UPDATE seller_bank_accounts SET verified = true if Razorpay confirms.
+```
+
+---
+
+### 6.9 Credit Withdrawal
+
+Trigger: Seller clicks "Withdraw" on Wallet.
+
+```
+1. [GUARD] Check seller has verified bank account.
+2. [GUARD] Check withdrawal amount >= ₹100.
+3. [DB] Deduct credits from 'earned' pool via deduct_credits RPC.
+4. [DB] INSERT into withdrawals (status='pending').
+5. [EXT] Create Razorpay Payout (IMPS).
+6. [DB] UPDATE withdrawals SET status='processing', razorpay_payout_id.
+7. [EXT] Send Slack DM: "Payout of ₹X initiated."
+8. Webhook: Update withdrawal status to 'completed' or 'failed'.
+```

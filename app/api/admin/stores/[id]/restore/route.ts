@@ -29,7 +29,8 @@ export async function POST(
     }
 
     // 1. Restore products
-    const productIds: string[] = seller.deactivated_snapshot?.product_ids || [];
+    const snapshot = seller.deactivated_snapshot as { product_ids?: string[] } | null;
+    const productIds: string[] = snapshot?.product_ids || [];
     if (productIds.length > 0) {
       await supabaseAdmin
         .from('products')

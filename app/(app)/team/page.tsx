@@ -39,6 +39,15 @@ type Member = {
   created_at: string;
 };
 
+type Invite = {
+  id: string;
+  email: string;
+  role: string;
+  custom_role_id: string | null;
+  status: string;
+  created_at: string;
+};
+
 type CustomRole = {
   id: string;
   name: string;
@@ -88,10 +97,10 @@ function AddMemberPanel({
     if (!email.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch("/api/team/members", {
+      const res = await fetch("/api/team/invites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), role, custom_role_id: role === "custom" ? customRoleId : null })
+        body: JSON.stringify({ email: email.trim().toLowerCase(), role, custom_role_id: role === "custom" ? customRoleId : null })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -100,7 +109,7 @@ function AddMemberPanel({
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to add member");
+      toast.error(err instanceof Error ? err.message : "Failed to send invite");
     } finally {
       setLoading(false);
     }
@@ -135,7 +144,7 @@ function AddMemberPanel({
               required
               className="w-full h-[44px] px-3 bg-surface border border-border rounded-lg text-ink text-sm focus:border-saffron focus:ring-1 focus:ring-saffron outline-none transition-all"
             />
-            <p className="text-xs text-ink-muted">They must already have a Crevis account.</p>
+            <p className="text-xs text-ink-muted">They will receive an email invitation to join your store.</p>
           </div>
 
           <div className="space-y-1.5">
@@ -342,6 +351,7 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
+  const [invites, setInvites] = useState<Invite[]>([]);
   const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
   const [addPanelOpen, setAddPanelOpen] = useState(false);
   const [createRoleOpen, setCreateRoleOpen] = useState(false);
@@ -351,13 +361,18 @@ export default function TeamPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
-    const [membersRes, rolesRes] = await Promise.all([
+    const [membersRes, invitesRes, rolesRes] = await Promise.all([
       fetch("/api/team/members"),
+      fetch("/api/team/invites"),
       fetch("/api/team/custom-roles"),
     ]);
     if (membersRes.ok) {
       const data = await membersRes.json();
       setMembers((data.members ?? []).filter((m: Member) => m.is_active));
+    }
+    if (invitesRes.ok) {
+        const data = await invitesRes.json();
+        setInvites(data.invites ?? []);
     }
     if (rolesRes.ok) {
       const data = await rolesRes.json();
@@ -429,6 +444,17 @@ export default function TeamPage() {
       toast.error(err instanceof Error ? err.message : "Failed to delete role");
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleWithdrawInvite = async (inviteId: string) => {
+    try {
+      const res = await fetch(`/api/team/invites/${inviteId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error((await res.json()).error);
+      toast.success("Invitation withdrawn");
+      fetchData();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to withdraw invite");
     }
   };
 
@@ -516,6 +542,8 @@ export default function TeamPage() {
                       <td className="px-5 py-4">
                         {member.role === "owner" ? (
                           roleBadge(member.role)
+                        ) : member.role === "custom" ? (
+                          roleBadge(member.role, roleName(member))
                         ) : (
                           <div className="relative inline-block">
                             <select
@@ -570,6 +598,54 @@ export default function TeamPage() {
             </div>
           )}
         </div>
+
+        {/* Pending Invites Section */}
+        {invites.length > 0 && (
+          <div className="bg-surface-raised border border-border rounded-2xl overflow-hidden shadow-sm mb-12">
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-surface-raised/50">
+              <h2 className="font-syne font-bold text-lg text-ink">Pending Invitations</h2>
+              <span className="text-xs font-medium bg-saffron/10 px-2 py-1 rounded-full border border-saffron/20 text-saffron">
+                {invites.length} Pending
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-surface/30">
+                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-ink-muted">Invitee</th>
+                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-ink-muted">Assigned Role</th>
+                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-ink-muted">Invited At</th>
+                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-ink-muted"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invites.map(invite => (
+                    <tr key={invite.id} className="border-b border-border last:border-0 hover:bg-surface/50 transition-colors">
+                      <td className="px-5 py-4 text-sm font-medium text-ink">{invite.email}</td>
+                      <td className="px-5 py-4">
+                        {roleBadge(
+                          invite.role as StandardRole, 
+                          customRoles.find(r => r.id === invite.custom_role_id)?.name
+                        )}
+                      </td>
+                      <td className="px-5 py-4 text-sm text-ink-secondary">
+                        {new Date(invite.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <button
+                          onClick={() => handleWithdrawInvite(invite.id)}
+                          className="text-xs font-semibold text-ink-muted hover:text-error p-1.5 transition-colors"
+                        >
+                          Withdraw
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Custom Roles Section */}
         <div>

@@ -56,12 +56,20 @@ export async function POST(request: Request) {
 
     if (insertError) throw insertError;
 
-    // THEN Deduct credits
-    const newBalance = await deductCredits(seller.id, CREDIT_COST_LISTING, "listing", `Listing fee for ${name}`);
-
-    // THEN Check new balance
-    if (newBalance === 0) {
-       await deactivateSellerListings(seller.id);
+    // THEN Deduct credits with a compensating transaction if it fails
+    try {
+      const newBalance = await deductCredits(seller.id, CREDIT_COST_LISTING, "listing", `Listing fee for ${name}`);
+      
+      // If new balance is 0 or less, deactivate all listings
+      if (typeof newBalance === 'number' && newBalance <= 0) {
+         await deactivateSellerListings(seller.id);
+      }
+    } catch (deductionError) {
+      // COMPENSATING TRANSACTION: If credit deduction fails, delete the product record
+      // to ensure we don't have UNPAID listings.
+      console.error("Credit deduction failed, rolling back product creation", deductionError);
+      await supabaseAdmin.from("products").delete().eq("id", product.id);
+      throw deductionError;
     }
 
     return NextResponse.json({ success: true, product });

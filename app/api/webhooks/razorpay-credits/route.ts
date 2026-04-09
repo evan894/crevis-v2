@@ -1,58 +1,51 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import type { Database } from '@/types/database.types';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { addCredits } from '@/lib/credits';
 import { sendSlackDM } from '@/lib/slack';
 import { SLACK_MESSAGES } from '@/lib/constants';
-// No service role imported from lib
-// Let me use standard pattern from other webhooks.
+
+import { validateWebhookSignature } from 'razorpay/dist/utils/razorpay-utils';
 
 export async function POST(req: Request) {
   try {
     const bodyText = await req.text();
     const signature = req.headers.get('x-razorpay-signature');
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET!;
 
     if (!signature) {
       console.error('[Razorpay Credits Webhook] Missing signature');
-      return new NextResponse('OK', { status: 200 }); // Always 200
+      return new NextResponse('OK', { status: 200 });
     }
 
-    const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
-      .update(bodyText)
-      .digest('hex');
-
-    if (expectedSignature !== signature) {
-      console.error('[Razorpay Credits Webhook] Invalid signature');
+    try {
+      const isValid = validateWebhookSignature(bodyText, signature, secret);
+      if (!isValid) {
+        console.error('[Razorpay Credits Webhook] Signature mismatch');
+        return new NextResponse('OK', { status: 200 });
+      }
+    } catch (err) {
+      console.error('[Razorpay Credits Webhook] Signature verification failed', err);
       return new NextResponse('OK', { status: 200 });
     }
 
     const event = JSON.parse(bodyText);
 
-    if (event.event !== 'payment.captured') {
+    if (event.event !== 'payment.captured' && event.event !== 'payment_link.paid') {
       return new NextResponse('OK', { status: 200 });
     }
 
-    const payment = event.payload.payment.entity;
-    const razorpay_order_id = payment.order_id;
-    const razorpay_payment_id = payment.id;
+    const payment = event.payload.payment?.entity || event.payload.payment_link?.entity;
+    if (!payment) return new NextResponse('OK', { status: 200 });
 
-    const cookieStore = cookies();
-    const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!, // Webhooks must use service role
-      {
-        cookies: {
-          get(name) { return cookieStore.get(name)?.value; },
-          set() { },
-          remove() { }
-        }
-      }
-    );
+    const razorpay_order_id = payment.order_id || (payment.notes?.order_id);
+    // const razorpay_payment_id = payment.id || (payment.order_id ? null : payment.id);
 
-    const { data: purchase, error: purchaseError } = await supabase
+    if (!razorpay_order_id) {
+       console.error('[Razorpay Credits Webhook] Missing order_id in payload');
+       return new NextResponse('OK', { status: 200 });
+    }
+
+    const { data: purchase, error: purchaseError } = await supabaseAdmin
       .from('credit_purchases')
       .select('*, sellers (id, slack_user_id, slack_access_token)')
       .eq('razorpay_order_id', razorpay_order_id)
@@ -68,9 +61,9 @@ export async function POST(req: Request) {
     }
 
     // Mark as completed
-    await supabase
+    await supabaseAdmin
       .from('credit_purchases')
-      .update({ status: 'completed', razorpay_payment_id })
+      .update({ status: 'completed', razorpay_payment_id: payment.id })
       .eq('id', purchase.id);
 
     // Call addCredits via RPC
@@ -79,13 +72,12 @@ export async function POST(req: Request) {
       purchase.credits_added, 
       'credit_purchase',
       'promo', 
-      `Razorpay txn: ${razorpay_payment_id}`
+      `Razorpay txn: ${payment.id}`
     );
 
     const seller = purchase.sellers;
-    if (seller && Array.isArray(seller) ? false : seller) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const s = seller as any;
+    if (seller && !Array.isArray(seller)) {
+      const s = seller as { slack_access_token?: string; slack_user_id?: string };
       if (s.slack_access_token && s.slack_user_id) {
           try {
               await sendSlackDM(
