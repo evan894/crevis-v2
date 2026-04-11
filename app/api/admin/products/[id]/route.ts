@@ -11,7 +11,6 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { reason } = await request.json();
 
     // Verify product exists
     const { data: product } = await supabaseAdmin

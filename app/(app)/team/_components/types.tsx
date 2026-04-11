@@ -1,3 +1,5 @@
+import React from "react";
+
 export type Permission =
   | "view_dashboard" | "manage_products" | "view_orders" | "pack_orders"
   | "update_delivery" | "purchase_credits" | "manage_team" | "view_analytics" | "manage_settings";

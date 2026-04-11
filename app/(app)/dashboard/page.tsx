@@ -411,7 +411,6 @@ export default function DashboardPage() {
         open={isQrModalOpen}
         onClose={() => setIsQrModalOpen(false)}
         qrCodeUrl={qrCodeUrl}
-        shopSlug={shopSlug}
         isGenerating={isGeneratingQr}
         onDownload={handleDownloadQr}
         onRegenerate={handleRegenerateQr}

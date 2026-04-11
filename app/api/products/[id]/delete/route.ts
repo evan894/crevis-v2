@@ -5,7 +5,7 @@ import { requirePermission } from "@/lib/roles";
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
-    const { user, supabase } = await requireAuth();
+    const { user } = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // Use permission system instead of direct seller lookup

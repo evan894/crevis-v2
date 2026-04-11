@@ -3,12 +3,11 @@
 import { QrCode, X, Download, RefreshCw } from "lucide-react";
 
 export function QrModal({
-  open, onClose, qrCodeUrl, shopSlug, isGenerating, onDownload, onRegenerate
+  open, onClose, qrCodeUrl, isGenerating, onDownload, onRegenerate
 }: {
   open: boolean;
   onClose: () => void;
   qrCodeUrl: string | null;
-  shopSlug: string;
   isGenerating: boolean;
   onDownload: () => void;
   onRegenerate: () => void;

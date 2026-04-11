@@ -8,7 +8,7 @@ import { CREDIT_COST_BOOST, LOW_CREDIT_THRESHOLD, CREDIT_LOW_THRESHOLD, SLACK_ME
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
-    const { user, supabase } = await requireAuth();
+    const { user } = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // Use permission system instead of direct seller lookup
