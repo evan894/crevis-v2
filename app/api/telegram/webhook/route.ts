@@ -1,20 +1,20 @@
-import { NextResponse } from 'next/server';
 import bot from '@/bot';
+import { NextRequest } from 'next/server';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const token = searchParams.get('token');
-
-    if (token !== process.env.ADMIN_SECRET_TOKEN) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const token = req.nextUrl.searchParams.get('token');
+    if (
+      process.env.ADMIN_SECRET_TOKEN &&
+      token !== process.env.ADMIN_SECRET_TOKEN
+    ) {
+      return new Response('unauthorized', { status: 401 });
     }
-
     const body = await req.json();
     await bot.handleUpdate(body);
-    return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("Telegram Webhook Error:", err);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error('[Telegram webhook error]', err);
+    // Always return 200 — never let Telegram retry loop
   }
+  return new Response('ok', { status: 200 });
 }
