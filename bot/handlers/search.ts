@@ -27,8 +27,8 @@ export function registerSearchHandlers(
     }
   });
 
-  bot.on('text', async (ctx) => {
-    if (ctx.session?.searchState !== 'AWAITING_QUERY') return;
+  bot.on('text', async (ctx, next) => {
+    if (ctx.session?.searchState !== 'AWAITING_QUERY') return next();
 
     ctx.session.searchState = undefined;
     const query = ctx.message.text.trim();

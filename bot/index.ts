@@ -11,6 +11,7 @@ import { registerSearchHandlers } from './handlers/search';
 import { registerBuyHandlers } from './handlers/buy';
 import { registerOrdersHandler } from './handlers/orders';
 import { registerReturnHandlers } from './handlers/returns';
+import { registerPharmacyHandlers } from './handlers/pharmacy';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
@@ -37,6 +38,11 @@ export interface SessionData {
     budget: string | null;
   };
   filterStep?: string;
+  // Pharmacy
+  pharmacyState?: 'AWAITING_PRESCRIPTION' | 'AWAITING_MEDICINE_NAME' | 'AWAITING_PHONE';
+  pharmacyCart?: Array<{ productId: string; name: string; price: number; shopName: string }>;
+  pharmacyPrescriptionFileId?: string;
+  buyerPhone?: string;
 }
 
 export interface BotContext extends Context {
@@ -74,6 +80,7 @@ registerSearchHandlers(bot, supabase);
 registerBuyHandlers(bot, supabase);
 registerOrdersHandler(bot, supabase);
 registerReturnHandlers(bot, supabase);
+registerPharmacyHandlers(bot, supabase);
 
 // ── Launch ────────────────────────────────────────────────────────────────────
 

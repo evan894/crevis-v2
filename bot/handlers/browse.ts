@@ -151,6 +151,18 @@ export function registerBrowseHandlers(
       } else if (category === 'Footwear') {
         ctx.session.filterStep = 'footwear_size';
         await askFootwearSize(ctx);
+      } else if (category === 'Pharmacy') {
+        ctx.session.pharmacyCart = ctx.session.pharmacyCart ?? [];
+        await ctx.editMessageText('🏥 *Pharmacy*\n\nHow would you like to order?', {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '📋 Upload Prescription', callback_data: 'pharma_prescription' }],
+              [{ text: '💊 Type Medicine Name', callback_data: 'pharma_type' }],
+              [{ text: '⬅ Back to Categories', callback_data: 'browse' }],
+            ],
+          },
+        }).catch(() => {});
       } else {
         ctx.session.filterStep = 'budget';
         await askBudget(ctx);

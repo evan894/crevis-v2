@@ -36,12 +36,114 @@ export async function POST(req: Request) {
     if (event.event === 'payment_link.paid' || event.event === 'payment.captured') {
        const payload = event.payload.payment_link?.entity || event.payload.payment?.entity;
        if (!payload) return NextResponse.json({ received: true });
-       
+
        const notes = payload.notes || {};
        const productId = notes.product_id;
        const buyerTelegramId = notes.buyer_telegram_id;
        const paymentId = payload.id;
+       const isPharmacyCart = notes.is_pharmacy_cart === 'true';
+       const buyerPhone = notes.buyer_phone || '';
 
+       // ── Pharmacy cart: complete all orders sharing this payment link ───────
+       if (isPharmacyCart) {
+         const { data: cartOrders } = await supabase
+           .from('orders')
+           .select('*, products(name), sellers(shop_name, slack_user_id, slack_access_token)')
+           .eq('razorpay_payment_id', paymentId)
+           .eq('status', 'pending');
+
+         if (!cartOrders || cartOrders.length === 0) {
+           console.error('[Pharmacy webhook] No pending orders found for', paymentId);
+           return NextResponse.json({ received: true });
+         }
+
+         const returnWindowClosesAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+
+         // Group by seller so each gets their own Slack notification
+         const sellerGroups = new Map<string, typeof cartOrders>();
+         for (const order of cartOrders) {
+           const sid = order.seller_id as string;
+           if (!sellerGroups.has(sid)) sellerGroups.set(sid, []);
+           sellerGroups.get(sid)!.push(order);
+         }
+
+         for (const order of cartOrders) {
+           const fee = Math.ceil(order.amount * PLATFORM_FEE_PERCENT);
+           await supabase.from('orders').update({
+             status: 'completed',
+             razorpay_payment_id: paymentId,
+             platform_fee: fee,
+             credits_deducted: fee,
+             return_window_closes_at: returnWindowClosesAt,
+             credits_released: false,
+           }).eq('id', order.id);
+
+           await supabase.from('delivery_orders').upsert(
+             { order_id: order.id, status: 'pending' },
+             { onConflict: 'order_id', ignoreDuplicates: true }
+           );
+
+           try {
+             const newBalance = await deductCredits(
+               order.seller_id as string,
+               fee,
+               'order_fee',
+               `5% fee for pharmacy: ${Array.isArray(order.products) ? order.products[0]?.name : order.products?.name}`,
+               order.amount,
+               order.id
+             );
+             if (typeof newBalance === 'number' && newBalance <= 0) {
+               await deactivateSellerListings(order.seller_id as string);
+             }
+           } catch (feeError) {
+             console.error('[Pharmacy webhook] Fee deduction error:', feeError);
+           }
+         }
+
+         // Telegram confirmation to buyer
+         if (buyerTelegramId) {
+           const allNames = cartOrders.map((o, i) => {
+             const name = Array.isArray(o.products) ? o.products[0]?.name : o.products?.name;
+             return `${i + 1}. ${name}`;
+           });
+           try {
+             await bot.telegram.sendMessage(
+               buyerTelegramId,
+               `✅ Pharmacy order placed!\n\n${allNames.join('\n')}\n\nOur sales agent will call you on ${buyerPhone || 'the number provided'} to confirm your order before it is packed.\n\nYou will receive updates here once your order is out for delivery.`
+             );
+           } catch (tgErr) {
+             console.error('[Pharmacy webhook] Telegram notification failed', tgErr);
+           }
+         }
+
+         // Slack notification per seller with phone for call-back
+         for (const sellerOrders of Array.from(sellerGroups.values())) {
+           const firstOrder = sellerOrders[0];
+           const slackToken = Array.isArray(firstOrder.sellers)
+             ? firstOrder.sellers[0]?.slack_access_token
+             : firstOrder.sellers?.slack_access_token;
+           const slackUserId = Array.isArray(firstOrder.sellers)
+             ? firstOrder.sellers[0]?.slack_user_id
+             : firstOrder.sellers?.slack_user_id;
+           const sellerTotal = sellerOrders.reduce((s: number, o) => s + Number(o.amount), 0);
+           const sellerItems = sellerOrders.map((o) =>
+             Array.isArray(o.products) ? o.products[0]?.name : (o.products as { name?: string } | null)?.name
+           );
+           try {
+             await sendSlackDM(
+               slackToken,
+               slackUserId,
+               `🏥 New pharmacy order from ${firstOrder.buyer_name}!\n\nMedicines: ${sellerItems.join(', ')}\nTotal: ₹${sellerTotal}\n\n📞 Call ${buyerPhone || 'N/A'} to reconfirm the order before packing.\n\nOnce confirmed, pack and hand over to the delivery agent.`
+             );
+           } catch (slackErr) {
+             console.error('[Pharmacy webhook] Slack notification failed:', slackErr);
+           }
+         }
+
+         return NextResponse.json({ received: true });
+       }
+
+       // ── Single-product order (existing flow) ─────────────────────────────
        // Find pending order
        let orderQuery = supabase.from('orders').select('*, products(name), sellers(shop_name, slack_user_id, slack_access_token)').eq('status', 'pending');
        if (productId && buyerTelegramId) {
