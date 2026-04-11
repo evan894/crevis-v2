@@ -1,24 +1,12 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { requireAuth } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import type { Database } from "@/types/database.types";
 import { resend, EMAIL_TEMPLATES } from "@/lib/resend";
-
-function getSupabase() {
-  const cookieStore = cookies();
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get(name) { return cookieStore.get(name)?.value; } } }
-  );
-}
 
 // GET — List pending invites
 export async function GET() {
   try {
-    const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user, supabase } = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { data: seller } = await supabase
@@ -43,9 +31,8 @@ export async function GET() {
 // POST — Create and send an invite
 export async function POST(request: Request) {
   try {
-    const supabase = getSupabase();
-    const { data: { user: caller } } = await supabase.auth.getUser();
-    if (!caller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { user, supabase } = await requireAuth();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { email, role, custom_role_id } = await request.json();
     if (!email || !role) return NextResponse.json({ error: "Email and role are required" }, { status: 400 });
@@ -55,7 +42,7 @@ export async function POST(request: Request) {
     const { data: member } = await supabase
       .from("store_members")
       .select("seller_id, role, sellers(shop_name)")
-      .eq("user_id", caller.id)
+      .eq("user_id", user.id)
       .single();
 
     if (!member || (member.role !== "owner" && member.role !== "manager")) {
@@ -85,7 +72,7 @@ export async function POST(request: Request) {
         email: email.toLowerCase(),
         role,
         custom_role_id: custom_role_id || null,
-        invited_by: caller.id,
+        invited_by: user.id,
         status: 'pending'
       }, { onConflict: 'seller_id,email' })
       .select()

@@ -1,27 +1,14 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { requireAuth } from "@/lib/auth";
 import { deductCredits, deactivateSellerListings } from "@/lib/credits";
 import { requirePermission } from "@/lib/roles";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { sendSlackDM } from "@/lib/slack";
-import type { Database } from "@/types/database.types";
 import { CREDIT_COST_BOOST, LOW_CREDIT_THRESHOLD, CREDIT_LOW_THRESHOLD, SLACK_MESSAGES } from "@/lib/constants";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
-    const cookieStore = cookies();
-    const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name) { return cookieStore.get(name)?.value; }
-        }
-      }
-    );
-
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user, supabase } = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // Use permission system instead of direct seller lookup

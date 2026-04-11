@@ -1,19 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/roles";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import type { Database } from "@/types/database.types";
-
-const ALLOWED_ROLES = ["owner", "manager", "sales_agent"];
-
-function getSupabase() {
-  const cookieStore = cookies();
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get(name) { return cookieStore.get(name)?.value; } } }
-  );
-}
 
 /**
  * GET /api/agent/orders
@@ -22,21 +10,12 @@ function getSupabase() {
  */
 export async function GET() {
   try {
-    const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Resolve seller via store_members (agent may not have a sellers row)
-    const { data: membership } = await supabaseAdmin
-      .from("store_members")
-      .select("seller_id, role")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .in("role", ALLOWED_ROLES)
-      .limit(1)
-      .single();
-
-    if (!membership) return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    let ctx;
+    try { ctx = await requirePermission(user.id, 'pack_orders'); }
+    catch { return NextResponse.json({ error: "Access denied" }, { status: 403 }); }
 
     const { data: orders, error } = await supabaseAdmin
       .from("orders")
@@ -49,7 +28,7 @@ export async function GET() {
         created_at,
         products ( id, name, photo_url, price, category )
       `)
-      .eq("seller_id", membership.seller_id)
+      .eq("seller_id", ctx.sellerId)
       .in("status", ["completed", "pending"])
       .order("created_at", { ascending: false });
 
@@ -70,7 +49,7 @@ export async function GET() {
       product: Array.isArray(o.products) ? o.products[0] : o.products,
     }));
 
-    return NextResponse.json({ orders: enriched, role: membership.role });
+    return NextResponse.json({ orders: enriched, role: ctx.role });
   } catch (err: unknown) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Error" }, { status: 500 });
   }

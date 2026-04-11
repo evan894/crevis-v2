@@ -1,21 +1,10 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/roles";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { sendSlackDM } from "@/lib/slack";
-import type { Database } from "@/types/database.types";
 
-const ALLOWED_ROLES = ["owner", "manager", "delivery_agent"];
 const MAX_OTP_ATTEMPTS = 3;
-
-function getSupabase() {
-  const cookieStore = cookies();
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get(name) { return cookieStore.get(name)?.value; } } }
-  );
-}
 
 async function sendTelegram(telegramId: string, text: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -40,20 +29,12 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { data: membership } = await supabaseAdmin
-      .from("store_members")
-      .select("seller_id, role")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .in("role", ALLOWED_ROLES)
-      .limit(1)
-      .single();
-
-    if (!membership) return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    let ctx;
+    try { ctx = await requirePermission(user.id, 'update_delivery'); }
+    catch { return NextResponse.json({ error: "Access denied" }, { status: 403 }); }
 
     const { action, otp: enteredOtp, reason, notes } = await request.json();
     const deliveryId = params.id;
@@ -74,7 +55,7 @@ export async function POST(
       .from("orders")
       .select("id, buyer_name, buyer_telegram_id, amount, seller_id, products(id, name)")
       .eq("id", delivery.order_id)
-      .eq("seller_id", membership.seller_id)
+      .eq("seller_id", ctx.sellerId)
       .single();
 
     if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
@@ -87,7 +68,7 @@ export async function POST(
     const { data: seller } = await supabaseAdmin
       .from("sellers")
       .select("slack_user_id, slack_access_token")
-      .eq("id", membership.seller_id)
+      .eq("id", ctx.sellerId)
       .single();
 
     // ── pick_up ──────────────────────────────────────────────────────────────

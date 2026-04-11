@@ -1,15 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { Database } from '@/types/database.types';
+import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
 import { deductCredits, deactivateSellerListings } from '@/lib/credits';
 import { sendSlackDM } from '@/lib/slack';
 import { Telegraf } from 'telegraf';
 import { PLATFORM_FEE_PERCENT, LOW_CREDIT_THRESHOLD, SLACK_MESSAGES } from '@/lib/constants';
-
-const supabase = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
 

@@ -1,23 +1,11 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { requireAuth } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import type { Database } from "@/types/database.types";
-
-function getSupabase() {
-  const cookieStore = cookies();
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get(name) { return cookieStore.get(name)?.value; } } }
-  );
-}
 
 // PATCH — edit custom role
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
-    const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user, supabase } = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { data: seller } = await supabase
@@ -42,8 +30,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 // DELETE — delete custom role (reject if in use)
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
-    const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user, supabase } = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { data: seller } = await supabase

@@ -1,12 +1,6 @@
 import { NextResponse } from 'next/server';
 import { razorpay } from '@/lib/razorpay';
-import { createClient } from '@supabase/supabase-js';
-import { Database } from '@/types/database.types';
-
-const supabase = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
 
 export async function POST(request: Request) {
   try {

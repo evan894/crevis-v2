@@ -35,9 +35,5 @@ export async function markReturnResolved(orderId: string) {
     })
     .eq("id", orderId);
 
-  // Notify admin via Slack (we could reuse sendSlackDM to admin slack ID if configured, 
-  // or just console log for now as "Admin notified to process refund")
-  console.log(`[Admin Notice] Order ${orderId} marked as returned for refund.`);
-
   revalidatePath("/orders");
 }

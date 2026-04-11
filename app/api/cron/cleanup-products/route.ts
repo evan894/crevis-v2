@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { sendSlackDM } from '@/lib/slack'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -46,18 +47,7 @@ export async function GET(request: Request) {
           const duration = seller?.unlist_duration_days || 7;
           const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`;
           const text = `🚮 Your product *${prod.name}* has been automatically deleted after being unlisted for ${duration} days.\n<${dashboardUrl}|View Dashboard>`;
-          
-          await fetch('https://slack.com/api/chat.postMessage', {
-            method: 'POST',
-            headers: {
-               'Authorization': `Bearer ${seller.slack_access_token}`,
-               'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-               channel: seller.slack_user_id,
-               text
-            })
-          });
+          await sendSlackDM(seller.slack_access_token, seller.slack_user_id, text);
         }
       } catch (err) {
         console.error(`Failed to delete product ${prod.id}:`, err)

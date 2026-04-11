@@ -1,24 +1,12 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { requireAuth } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import type { Database } from "@/types/database.types";
 import { sendSlackDM } from "@/lib/slack";
-
-function getSupabase() {
-  const cookieStore = cookies();
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get(name) { return cookieStore.get(name)?.value; } } }
-  );
-}
 
 // GET — list all members for current seller
 export async function GET() {
   try {
-    const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user, supabase } = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { data: seller } = await supabase
@@ -56,8 +44,7 @@ export async function GET() {
 // POST — add a member by email
 export async function POST(request: Request) {
   try {
-    const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user, supabase } = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { data: seller } = await supabase

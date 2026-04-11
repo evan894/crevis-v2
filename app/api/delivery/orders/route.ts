@@ -1,19 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/roles";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import type { Database } from "@/types/database.types";
-
-const ALLOWED_ROLES = ["owner", "manager", "delivery_agent"];
-
-function getSupabase() {
-  const cookieStore = cookies();
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get(name) { return cookieStore.get(name)?.value; } } }
-  );
-}
 
 /**
  * GET /api/delivery/orders
@@ -22,21 +10,12 @@ function getSupabase() {
  */
 export async function GET() {
   try {
-    const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Resolve via store_members
-    const { data: membership } = await supabaseAdmin
-      .from("store_members")
-      .select("seller_id, role")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .in("role", ALLOWED_ROLES)
-      .limit(1)
-      .single();
-
-    if (!membership) return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    let ctx;
+    try { ctx = await requirePermission(user.id, 'update_delivery'); }
+    catch { return NextResponse.json({ error: "Access denied" }, { status: 403 }); }
 
     // Today's start (UTC midnight)
     const todayStart = new Date();
@@ -68,7 +47,7 @@ export async function GET() {
       .from("orders")
       .select("id, buyer_name, buyer_telegram_id, amount, seller_id, products(id, name, photo_url)")
       .in("id", orderIds.length > 0 ? orderIds : ["00000000-0000-0000-0000-000000000000"])
-      .eq("seller_id", membership.seller_id);
+      .eq("seller_id", ctx.sellerId);
 
     const orderMap = new Map((orders ?? []).map(o => [o.id, o]));
 
@@ -81,7 +60,7 @@ export async function GET() {
       })
       .filter(Boolean);
 
-    return NextResponse.json({ orders: enriched, role: membership.role, userId: user.id });
+    return NextResponse.json({ orders: enriched, role: ctx.role, userId: user.id });
   } catch (err: unknown) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Error" }, { status: 500 });
   }

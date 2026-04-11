@@ -26,7 +26,6 @@ export async function DELETE(
 
     if (error) throw error;
 
-    console.log(`[Admin] Product ${params.id} (${product.name}) deactivated. Reason: ${reason}`);
     return NextResponse.json({ success: true, product_name: product.name });
   } catch (err: unknown) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Error" }, { status: 500 });

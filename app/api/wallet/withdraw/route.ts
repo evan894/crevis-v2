@@ -1,27 +1,17 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { createServerClient } from '@/lib/supabase-server';
+import { requireAuth } from '@/lib/auth';
 import { deductCredits } from '@/lib/credits';
 import { sendSlackDM } from '@/lib/slack';
+import { createPayout } from '@/lib/razorpay';
 
 export const dynamic = 'force-dynamic';
 
-const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID!;
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET!;
 const MIN_WITHDRAWAL_INR = 100;
-
-function razorpayHeaders() {
-  const token = Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString('base64');
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Basic ${token}`,
-  };
-}
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireAuth();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
@@ -49,7 +39,6 @@ export async function POST(req: Request) {
       sellerId = member.seller_id;
       isOwner = true;
     } else {
-      // Check if they own a store directly
       const { data: directSeller } = await supabaseAdmin
         .from('sellers')
         .select('id')
@@ -98,51 +87,24 @@ export async function POST(req: Request) {
     }
 
     // --- Deduct earned credits (1 CC = ₹1) ---
-    const amountInr = amount; // 1:1 ratio
     await deductCredits(
       sellerId,
       amount,
       'withdrawal',
-      `Withdrawal of ₹${amountInr}`,
+      `Withdrawal of ₹${amount}`,
       undefined,
       undefined,
       'earned'
     );
 
     // --- Trigger Razorpay Payout ---
-    let razorpayPayoutId: string | null = null;
-    let payoutStatus = 'pending';
-
-    try {
-      const payoutRes = await fetch('https://api.razorpay.com/v1/payouts', {
-        method: 'POST',
-        headers: razorpayHeaders(),
-        body: JSON.stringify({
-          account_number: process.env.RAZORPAY_ACCOUNT_NUMBER || '',
-          fund_account_id: bankAccount.razorpay_fund_account_id,
-          amount: amountInr * 100, // paise
-          currency: 'INR',
-          mode: 'IMPS',
-          purpose: 'payout',
-          queue_if_low_balance: true,
-          reference_id: `withdrawal_${sellerId}_${Date.now()}`,
-          narration: `Crevis earnings for ${seller.shop_name}`,
-        }),
-      });
-
-      if (payoutRes.ok) {
-        const payout = await payoutRes.json();
-        razorpayPayoutId = payout.id;
-        payoutStatus = payout.status === 'processed' ? 'completed' : 'processing';
-      } else {
-        const errBody = await payoutRes.json();
-        console.error('[withdraw] Razorpay payout error:', errBody);
-        payoutStatus = 'failed';
-      }
-    } catch (payoutErr) {
-      console.error('[withdraw] Payout network error:', payoutErr);
-      payoutStatus = 'failed';
-    }
+    const { id: razorpayPayoutId, status: payoutStatus } = await createPayout({
+      payoutAccountNumber: process.env.RAZORPAY_ACCOUNT_NUMBER || '',
+      fundAccountId: bankAccount.razorpay_fund_account_id,
+      amountInr: amount,
+      sellerId,
+      shopName: seller.shop_name,
+    });
 
     // --- Insert withdrawal record ---
     const { data: withdrawal, error: wError } = await supabaseAdmin
@@ -150,7 +112,7 @@ export async function POST(req: Request) {
       .insert({
         seller_id: sellerId,
         amount_credits: amount,
-        amount_inr: amountInr,
+        amount_inr: amount,
         status: payoutStatus,
         razorpay_payout_id: razorpayPayoutId,
       })
@@ -163,8 +125,8 @@ export async function POST(req: Request) {
     try {
       if (seller.slack_user_id && seller.slack_access_token) {
         const statusMsg = payoutStatus === 'failed'
-          ? `⚠️ Withdrawal of ₹${amountInr} was initiated but payout failed. Please contact support.`
-          : `💸 Withdrawal of ₹${amountInr} initiated. Expected in 1-2 business days.`;
+          ? `⚠️ Withdrawal of ₹${amount} was initiated but payout failed. Please contact support.`
+          : `💸 Withdrawal of ₹${amount} initiated. Expected in 1-2 business days.`;
 
         await sendSlackDM(seller.slack_access_token, seller.slack_user_id, statusMsg);
       }

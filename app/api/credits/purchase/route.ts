@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import Razorpay from "razorpay";
-import type { Database } from "@/types/database.types";
+import { requireAuth } from "@/lib/auth";
+import { razorpay } from "@/lib/razorpay";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 const PACKAGES: Record<number, number> = {
@@ -19,27 +17,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid package" }, { status: 400 });
     }
 
-    const cookieStore = cookies();
-    const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name) { return cookieStore.get(name)?.value; }
-        }
-      }
-    );
-
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user, supabase } = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { data: seller } = await supabase.from("sellers").select("id").eq("user_id", user.id).single();
     if (!seller) return NextResponse.json({ error: "Seller not found" }, { status: 404 });
-
-    const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID!,
-      key_secret: process.env.RAZORPAY_KEY_SECRET!
-    });
 
     const options = {
       amount: amount * 100, // paise

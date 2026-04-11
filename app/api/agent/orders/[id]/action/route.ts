@@ -1,20 +1,8 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/roles";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { sendSlackDM } from "@/lib/slack";
-import type { Database } from "@/types/database.types";
-
-const ALLOWED_ROLES = ["owner", "manager", "sales_agent"];
-
-function getSupabase() {
-  const cookieStore = cookies();
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get(name) { return cookieStore.get(name)?.value; } } }
-  );
-}
 
 function generateOTP(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -43,21 +31,12 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Verify agent membership
-    const { data: membership } = await supabaseAdmin
-      .from("store_members")
-      .select("seller_id, role")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .in("role", ALLOWED_ROLES)
-      .limit(1)
-      .single();
-
-    if (!membership) return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    let ctx;
+    try { ctx = await requirePermission(user.id, 'pack_orders'); }
+    catch { return NextResponse.json({ error: "Access denied" }, { status: 403 }); }
 
     const { action } = await request.json();
     const orderId = params.id;
@@ -67,7 +46,7 @@ export async function POST(
       .from("orders")
       .select("id, buyer_name, buyer_telegram_id, amount, seller_id, products(id, name)")
       .eq("id", orderId)
-      .eq("seller_id", membership.seller_id)
+      .eq("seller_id", ctx.sellerId)
       .single();
 
     if (orderErr || !order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
@@ -80,7 +59,7 @@ export async function POST(
     const { data: seller } = await supabaseAdmin
       .from("sellers")
       .select("slack_user_id, slack_access_token, shop_name")
-      .eq("id", membership.seller_id)
+      .eq("id", ctx.sellerId)
       .single();
 
     // ── action: start_packing ──────────────────────────────────────────────

@@ -1,25 +1,18 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { createServerClient } from '@/lib/supabase-server';
+import { requireAuth } from '@/lib/auth';
 import { sendSlackDM } from '@/lib/slack';
+import {
+  createRazorpayContact,
+  createFundAccount,
+  validateFundAccount,
+} from '@/lib/razorpay';
 
 export const dynamic = 'force-dynamic';
 
-const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID!;
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET!;
-
-function razorpayHeaders() {
-  const token = Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString('base64');
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Basic ${token}`,
-  };
-}
-
 export async function POST(req: Request) {
   try {
-    const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { user } = await requireAuth();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
@@ -65,57 +58,18 @@ export async function POST(req: Request) {
 
     if (upsertError) throw new Error(upsertError.message);
 
-    // Step 1: Create Razorpay Contact
-    const contactRes = await fetch('https://api.razorpay.com/v1/contacts', {
-      method: 'POST',
-      headers: razorpayHeaders(),
-      body: JSON.stringify({
-        name: accountHolderName,
-        type: 'vendor',
-        reference_id: sellerId,
-      }),
-    });
-
+    // Create contact → fund account → penny-drop validation
+    const contactId = await createRazorpayContact(sellerId, accountHolderName);
     let fundAccountId: string | null = null;
 
-    if (contactRes.ok) {
-      const contact = await contactRes.json();
-      const contactId = contact.id;
+    if (contactId) {
+      fundAccountId = await createFundAccount(contactId, accountHolderName, ifsc, accountNumber);
 
-      // Step 2: Create Fund Account
-      const fundRes = await fetch('https://api.razorpay.com/v1/fund_accounts', {
-        method: 'POST',
-        headers: razorpayHeaders(),
-        body: JSON.stringify({
-          contact_id: contactId,
-          account_type: 'bank_account',
-          bank_account: {
-            name: accountHolderName,
-            ifsc,
-            account_number: accountNumber,
-          },
-        }),
-      });
+      if (fundAccountId) {
+        const payoutAccountNumber = process.env.RAZORPAY_ACCOUNT_NUMBER || '';
+        const verified = await validateFundAccount(fundAccountId, payoutAccountNumber);
 
-      if (fundRes.ok) {
-        const fundAccount = await fundRes.json();
-        fundAccountId = fundAccount.id;
-
-        // Step 3: Penny drop validation
-        const verifyRes = await fetch('https://api.razorpay.com/v1/fund_accounts/validations', {
-          method: 'POST',
-          headers: razorpayHeaders(),
-          body: JSON.stringify({
-            account_number: process.env.RAZORPAY_ACCOUNT_NUMBER || '',
-            fund_account: { id: fundAccountId },
-            amount: 100, // ₹1 in paise
-            currency: 'INR',
-            notes: { purpose: 'bank_verification' },
-          }),
-        });
-
-        if (verifyRes.ok) {
-          // Mark as verified
+        if (verified) {
           await supabaseAdmin
             .from('seller_bank_accounts')
             .update({
