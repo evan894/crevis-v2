@@ -15,6 +15,7 @@ export const CATEGORIES = [
   'Footwear',
   'Accessories',
   'Home Textiles',
+  'Pharmacy',
   'Other'
 ];
 
