@@ -5,7 +5,6 @@ import { useRouter, usePathname } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase";
 import { LogOut, ClipboardList, Package, Clock } from "lucide-react";
 import Link from "next/link";
-import { toast } from "react-hot-toast";
 
 export default function SalesAgentLayout({ children }: { children: React.ReactNode }) {
   const [shopName, setShopName] = useState("");
@@ -22,7 +21,7 @@ export default function SalesAgentLayout({ children }: { children: React.ReactNo
           .eq("user_id", data.user.id)
           .single()
           .then((res) => {
-             const sellers = res.data?.sellers as any;
+             const sellers = res.data?.sellers as unknown as { shop_name: string };
              if (sellers?.shop_name) {
                setShopName(sellers.shop_name);
              }

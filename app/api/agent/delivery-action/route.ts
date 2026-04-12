@@ -4,7 +4,6 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import bot from '@/bot';
 import { sendSlackDM } from '@/lib/slack';
-import { SLACK_MESSAGES } from '@/lib/constants';
 
 export async function POST(req: Request) {
   try {
@@ -37,7 +36,7 @@ export async function POST(req: Request) {
       .single();
 
     if (!dOrder) return NextResponse.json({ error: "Order not found" }, { status: 404 });
-    const orderData = dOrder.orders as any;
+    const orderData = dOrder.orders as unknown as {id: string, seller_id: string, buyer_telegram_id: string, buyer_name: string, products: {name: string}};
     const shortId = orderData.id.slice(-6).toUpperCase();
 
     // PICK UP ORDER
@@ -97,7 +96,7 @@ export async function POST(req: Request) {
       const { data: seller } = await supabaseAdmin.from('sellers').select('slack_user_id, slack_access_token').eq('id', orderData.seller_id).single();
       if (seller?.slack_access_token && seller?.slack_user_id) {
         sendSlackDM(seller.slack_access_token, seller.slack_user_id, `✅ Order #${shortId} delivered to ${orderData.buyer_name}.`)
-          .catch((err: any) => console.error(err));
+          .catch((err: unknown) => console.error(err));
       }
       return NextResponse.json({ success: true });
     }
@@ -120,7 +119,7 @@ export async function POST(req: Request) {
       const { data: seller } = await supabaseAdmin.from('sellers').select('slack_user_id, slack_access_token').eq('id', orderData.seller_id).single();
       if (seller?.slack_access_token && seller?.slack_user_id) {
         sendSlackDM(seller.slack_access_token, seller.slack_user_id, `❌ Order #${shortId} delivery failed.\nReason: ${reason}`)
-          .catch((err: any) => console.error(err));
+          .catch((err: unknown) => console.error(err));
       }
       return NextResponse.json({ success: true });
     }

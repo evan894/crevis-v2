@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@/lib/supabase";
 import { formatDistanceToNow } from "date-fns";
-import { Loader2, CheckCircle2, Copy } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 type DeliveryOrder = {
@@ -14,6 +14,7 @@ type DeliveryOrder = {
     id: string;
     buyer_name: string;
     amount: number;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     selected_variant: any;
     created_at: string;
     products: {
@@ -82,7 +83,7 @@ export default function SalesAgentDashboard() {
 
     // Sub to delivery_orders changes
     const channel = supabase.channel('agent-delivery-orders')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_orders' }, payload => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_orders' }, () => {
          if (sellerId) fetchOrders(sellerId);
       })
       .subscribe();
@@ -135,8 +136,8 @@ export default function SalesAgentDashboard() {
       setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: "packed", otp: data.otp } : o));
       setActiveTab("packed");
       toast.success("Order packed! Notifications sent.");
-    } catch(err: any) {
-      toast.error(err.message);
+    } catch(err: unknown) {
+      toast.error((err as Error).message);
       if (sellerId) fetchOrders(sellerId);
     } finally {
       setActionLoading(null);

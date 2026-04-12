@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@/lib/supabase";
 import { formatDistanceToNow, isToday } from "date-fns";
-import { Loader2, CheckCircle2, ChevronDown, Mails } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 type DeliveryOrder = {
@@ -17,6 +17,7 @@ type DeliveryOrder = {
     id: string;
     buyer_name: string;
     amount: number;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     selected_variant: any;
     created_at: string;
     products: {
@@ -39,7 +40,7 @@ export default function DeliveryAgentDashboard() {
 
   const supabase = createBrowserClient();
 
-  const fetchOrders = async (sId: string, uId: string) => {
+  const fetchOrders = async (sId: string) => {
     const { data, error } = await supabase
       .from('delivery_orders')
       .select(`
@@ -86,15 +87,15 @@ export default function DeliveryAgentDashboard() {
           .then((res) => {
              if (res.data?.seller_id) {
                setSellerId(res.data.seller_id);
-               fetchOrders(res.data.seller_id, data.user.id);
+               fetchOrders(res.data.seller_id);
              }
           });
       }
     });
 
     const channel = supabase.channel('delivery-agent-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_orders' }, payload => {
-         if (sellerId && userId) fetchOrders(sellerId, userId);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_orders' }, () => {
+         if (sellerId) fetchOrders(sellerId);
       })
       .subscribe();
       
@@ -121,7 +122,7 @@ export default function DeliveryAgentDashboard() {
         if (data.attemptsLeft !== undefined) {
            toast.error(`Wrong OTP. ${data.attemptsLeft} tries left.`);
            // Refresh to update attempts
-           if (sellerId && userId) fetchOrders(sellerId, userId);
+           if (sellerId) fetchOrders(sellerId);
         } else if (data.locked) {
            toast.error("Too many wrong attempts. Contact customer directly.");
         } else {
@@ -136,10 +137,10 @@ export default function DeliveryAgentDashboard() {
             setFailedReason("");
          }
          // Optimistically fetch or rely on channel
-         if (sellerId && userId) fetchOrders(sellerId, userId);
+         if (sellerId) fetchOrders(sellerId);
       }
-    } catch(err: any) {
-      toast.error(err.message);
+    } catch(err: unknown) {
+      toast.error((err as Error).message);
     } finally {
       setActionLoading(null);
     }
@@ -284,7 +285,7 @@ export default function DeliveryAgentDashboard() {
                            type="number"
                            value={otpInputs[dOrder.id] || ""}
                            onChange={e => {
-                             let v = e.target.value.substring(0, 6);
+                             const v = e.target.value.substring(0, 6);
                              setOtpInputs(prev => ({...prev, [dOrder.id]: v}));
                            }}
                            placeholder="------"

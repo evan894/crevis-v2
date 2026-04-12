@@ -70,8 +70,8 @@ export default function AgentInventory() {
       
       setProducts(prev => prev.map(p => p.id === id ? { ...p, stock: newStock, active: newStock > 0 } : p));
       toast.success("Stock updated");
-    } catch(err: any) {
-      toast.error(err.message);
+    } catch(err: unknown) {
+      toast.error((err as Error).message);
     } finally {
       setUpdating(prev => ({ ...prev, [id]: false }));
     }

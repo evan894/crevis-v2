@@ -19,7 +19,7 @@ export default function DeliveryAgentLayout({ children }: { children: React.Reac
           .eq("user_id", data.user.id)
           .single()
           .then((res) => {
-             const sellers = res.data?.sellers as any;
+             const sellers = res.data?.sellers as unknown as { shop_name: string };
              if (sellers?.shop_name) {
                setShopName(sellers.shop_name);
              }

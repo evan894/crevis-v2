@@ -4,7 +4,6 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import bot from '@/bot';
 import { sendSlackDM } from '@/lib/slack';
-import { SLACK_MESSAGES } from '@/lib/constants';
 
 export async function POST(req: Request) {
   try {
@@ -37,7 +36,7 @@ export async function POST(req: Request) {
 
     const hasPermission = 
       ['owner', 'manager', 'sales_agent'].includes(storeMember.role) ||
-      (storeMember.role === 'custom' && (storeMember.custom_roles as any)?.permissions?.includes('pack_orders'));
+      (storeMember.role === 'custom' && (storeMember.custom_roles as unknown as {permissions: string[]})?.permissions?.includes('pack_orders'));
 
     if (!hasPermission) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -77,7 +76,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Failed to update order" }, { status: 500 });
     }
 
-    const orderData = dOrder.orders as any;
+    const orderData = dOrder.orders as unknown as {id: string, buyer_telegram_id: string, buyer_name: string, products: {name: string}, seller_id: string};
     const shortId = orderData.id.slice(-6).toUpperCase();
 
     // 2. Telegram to customer
@@ -99,7 +98,7 @@ export async function POST(req: Request) {
     if (seller && seller.slack_access_token && seller.slack_user_id) {
        const slackMessage = `📦 Order #${shortId} packed and ready for pickup.\nCustomer: ${orderData.buyer_name} • ${orderData.products?.name}`;
        sendSlackDM(seller.slack_access_token, seller.slack_user_id, slackMessage)
-        .catch((err: any) => console.error("TF Slack error:", err));
+        .catch((err: unknown) => console.error("TF Slack error:", err));
     }
 
     return NextResponse.json({ success: true, otp });

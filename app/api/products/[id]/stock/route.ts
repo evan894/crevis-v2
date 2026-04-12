@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { sendSlackDM } from '@/lib/slack';
-import { SLACK_MESSAGES } from '@/lib/constants';
 
 // Sales agent or manage_products permission
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
@@ -49,7 +48,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (member.role === 'owner' || member.role === 'manager' || member.role === 'sales_agent') {
       hasAccess = true;
     } else if (member.role === 'custom') {
-      const cr = member.custom_roles as any;
+      const cr = member.custom_roles as unknown as {permissions: string[]};
       if (cr?.permissions?.includes('manage_products')) {
         hasAccess = true;
       }
@@ -60,7 +59,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
 
     // Update stock
-    const payload: any = { stock };
+    const payload: Record<string, unknown> = { stock };
     if (stock === 0) {
       payload.active = false;
     }
