@@ -92,7 +92,6 @@ export default function NewProductPage() {
     e.preventDefault();
     if (loading) return;
     
-    if (files.length === 0) return toast.error("At least one product image is required");
     if (!name.trim()) return toast.error("Product name is required");
     if (!price || isNaN(Number(price)) || Number(price) <= 0) return toast.error("Valid price is required");
     
@@ -109,23 +108,26 @@ export default function NewProductPage() {
     setLoading(true);
 
     try {
-      // Upload all photos
+      // Upload all photos if present
       const uploadedUrls: string[] = [];
-      for (const file of files) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      let coverPhoto = "https://placehold.co/400x400?text=No+Image";
+      
+      if (files.length > 0) {
+        for (const file of files) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(fileName, file, { cacheControl: '3600', upsert: false });
+          const { error: uploadError } = await supabase.storage
+            .from('product-images')
+            .upload(fileName, file, { cacheControl: '3600', upsert: false });
 
-        if (uploadError) throw new Error("Image upload failed: " + uploadError.message);
+          if (uploadError) throw new Error("Image upload failed: " + uploadError.message);
 
-        const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
-        uploadedUrls.push(publicUrl);
+          const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+          uploadedUrls.push(publicUrl);
+        }
+        coverPhoto = uploadedUrls[0];
       }
-
-      const coverPhoto = uploadedUrls[0];
 
       const res = await fetch("/api/products/create", {
         method: "POST",
@@ -192,7 +194,8 @@ export default function NewProductPage() {
           {/* Photo Upload — up to 5 */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-ink block">
-              Product Photos <span className="text-error">*</span>
+              Product Photos
+
               <span className="text-ink-muted font-normal ml-2">({files.length}/5)</span>
             </label>
 

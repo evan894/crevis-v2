@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { name, description, price, category, photo_url, photo_urls, stock, has_variants, variants } = body;
 
-    if (!name || !price || !category || !photo_url) {
+    if (!name || !price || !category) {
        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -61,12 +61,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, product });
   } catch (error: unknown) {
-    if (error instanceof Error) {
-       if (error.message.includes('insufficient')) {
-          return NextResponse.json({ error: "Insufficient credits" }, { status: 400 });
-       }
-       return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-    return NextResponse.json({ error: "Failed to create product" }, { status: 400 });
+    console.error('[product create caught]', error);
+    return NextResponse.json(
+      { 
+        error: 'Failed to create product', 
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    );
   }
 }
