@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function AuthPage() {
+  const [view, setView] = useState<"signin" | "signup" | "confirm-email">("signin");
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
@@ -26,7 +27,7 @@ export default function AuthPage() {
       if (isSignUp) {
         if (!name.trim()) throw new Error("Name is required");
         if (password.length < 8) throw new Error("Password must be at least 8 characters");
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -34,8 +35,16 @@ export default function AuthPage() {
             emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
           },
         });
-        if (signUpError) throw signUpError;
-        router.push("/onboarding");
+        if (signUpError) {
+          setError(signUpError.message);
+          return;
+        }
+        
+        if (data.session) {
+          router.push("/onboarding");
+        } else if (data.user && !data.session) {
+          setView("confirm-email");
+        }
       } else {
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
@@ -101,11 +110,20 @@ export default function AuthPage() {
 
           <div className="space-y-2 text-center lg:text-left">
             <h2 className="font-syne text-xl font-bold text-ink">
-              {isSignUp ? "Create your account" : "Welcome back"}
+              {view === "confirm-email" 
+                ? "Check your email"
+                : isSignUp ? "Create your account" : "Welcome back"}
             </h2>
             <p className="font-dm-sans text-sm text-ink-muted">
-              {isSignUp ? "Enter your details to get your shop running." : "Enter your credentials to access your dashboard."}
+              {view === "confirm-email" 
+                ? `We sent a confirmation link to ${email}. Click the link to activate your account. You can close this tab.`
+                : isSignUp ? "Enter your details to get your shop running." : "Enter your credentials to access your dashboard."}
             </p>
+            {view === "confirm-email" && (
+              <p className="font-dm-sans text-xs text-ink-muted mt-2">
+                Didn't receive it? Check your spam folder or contact support.
+              </p>
+            )}
           </div>
 
           {error && (
@@ -114,6 +132,15 @@ export default function AuthPage() {
             </div>
           )}
 
+          {view === "confirm-email" ? (
+            <button
+              type="button"
+              onClick={() => setView("signin")}
+              className="w-full h-[44px] mt-6 flex items-center justify-center bg-saffron text-surface-raised rounded-md font-dm-sans font-medium hover:bg-saffron-dark transition-all"
+            >
+              Back to sign in
+            </button>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
               <div className="space-y-1">
@@ -166,10 +193,10 @@ export default function AuthPage() {
             </div>
 
             {!isSignUp && (
-              <div className="flex justify-end pt-1">
+              <div className="flex justify-end pt-1 -mt-2 mb-2">
                 <Link 
                   href="/auth/forgot-password"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -190,13 +217,16 @@ export default function AuthPage() {
               )}
             </button>
           </form>
+          )}
 
+          {view !== "confirm-email" && (
           <div className="text-center pt-2">
             <button
               type="button"
               onClick={() => {
                 setError(null);
                 setIsSignUp(!isSignUp);
+                setView(isSignUp ? "signin" : "signup");
               }}
               disabled={loading}
               className="text-sm font-dm-sans text-ink-secondary hover:text-ink transition-colors duration-fast"
@@ -206,6 +236,7 @@ export default function AuthPage() {
                 : "Don't have an account? Sign up"}
             </button>
           </div>
+          )}
 
         </div>
       </div>

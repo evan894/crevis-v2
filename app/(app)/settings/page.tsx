@@ -5,7 +5,7 @@ import { createBrowserClient } from "@/lib/supabase";
 import { Loader2, CheckCircle2, Link2, Check, X, Copy, Pencil } from "lucide-react";
 import { toast } from "react-hot-toast";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://crevis-v2.vercel.app";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://crevis.in";
 const SLUG_REGEX = /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/;
 
 export default function SettingsPage() {

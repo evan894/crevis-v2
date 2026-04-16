@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createBrowserClient } from "@/lib/supabase";
 import { formatDistanceToNow } from "date-fns";
 import { Loader2, CheckCircle2 } from "lucide-react";
@@ -32,7 +32,7 @@ export default function SalesAgentDashboard() {
 
   const supabase = createBrowserClient();
 
-  const fetchOrders = async (sId: string) => {
+  const fetchOrders = useCallback(async (sId: string) => {
     const { data, error } = await supabase
       .from('delivery_orders')
       .select(`
@@ -61,7 +61,7 @@ export default function SalesAgentDashboard() {
       setOrders((data as unknown as DeliveryOrder[]) || []);
     }
     setLoading(false);
-  };
+  }, [supabase]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -91,7 +91,7 @@ export default function SalesAgentDashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase]);
+  }, [supabase, sellerId, fetchOrders]);
 
   const filteredOrders = orders.filter(o => o.status === activeTab);
   

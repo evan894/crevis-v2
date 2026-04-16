@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(
@@ -9,6 +10,25 @@ export async function POST(
     const authHeader = request.headers.get('x-admin-token');
     if (authHeader !== process.env.ADMIN_SECRET_TOKEN) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { getCookies, setCookies, removeCookies } = createCookieHandlers();
+
+    const supabaseAuth = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get: getCookies,
+          set: setCookies,
+          remove: removeCookies,
+        },
+      }
+    );
+
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id: sellerId } = params;

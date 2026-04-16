@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createBrowserClient } from "@/lib/supabase";
 import { formatDistanceToNow, isToday } from "date-fns";
 import { Loader2, CheckCircle2 } from "lucide-react";
@@ -40,7 +40,7 @@ export default function DeliveryAgentDashboard() {
 
   const supabase = createBrowserClient();
 
-  const fetchOrders = async (sId: string) => {
+  const fetchOrders = useCallback(async (sId: string) => {
     const { data, error } = await supabase
       .from('delivery_orders')
       .select(`
@@ -72,7 +72,7 @@ export default function DeliveryAgentDashboard() {
       setOrders((data as unknown as DeliveryOrder[]) || []);
     }
     setLoading(false);
-  };
+  }, [supabase]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -102,7 +102,7 @@ export default function DeliveryAgentDashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, sellerId, userId]);
+  }, [supabase, sellerId, userId, fetchOrders]);
 
   const packedOrders = orders.filter(o => o.status === "packed");
   const outOrders = orders.filter(o => o.status === "out_for_delivery" && o.agent_id === userId);

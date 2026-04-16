@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createBrowserClient } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
 import { format, isToday, isThisWeek, isThisMonth } from "date-fns";
@@ -39,9 +39,9 @@ export default function AgentHistory() {
           });
       }
     });
-  }, [supabase]);
+  }, [supabase, fetchHistory]);
 
-  const fetchHistory = async (sellerId: string) => {
+  const fetchHistory = useCallback(async (sellerId: string) => {
     const { data } = await supabase
       .from('orders')
       .select(`
@@ -58,7 +58,7 @@ export default function AgentHistory() {
 
     setOrders((data as unknown as Order[]) || []);
     setLoading(false);
-  };
+  }, [supabase]);
 
   const filteredOrders = orders.filter(o => {
     const d = new Date(o.created_at);

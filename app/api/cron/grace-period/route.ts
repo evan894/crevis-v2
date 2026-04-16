@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { sendSlackDM, slackAdmin } from '@/lib/slack';
 
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
       const graceStart = new Date(seller.grace_period_started_at!).getTime();
       const daysOverdue = Math.floor((now - graceStart) / (1000 * 60 * 60 * 24));
       
-      const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://crevis.in';
 
       if (daysOverdue === 3) {
         await sendSlackDM(

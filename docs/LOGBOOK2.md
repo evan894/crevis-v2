@@ -106,3 +106,12 @@ Copy this block at end of every session:
 **Next session:** [ ] Manual verification via end-to-end tests on branch before merge.
 **Env state:** Supabase / Bot ✅ / Razorpay / Vercel / Resend
 ---
+
+### Phase 9: Pre-Launch QA Remediation
+
+- Fixed API route security by ensuring all mutation APIs require user authentication and proper roles.
+- Fixed signup redirect loop by adding a 'confirm-email' state in the authentication component.
+- Resolved cron build failures by forcing dynamic server usage across all cron routes.
+- Built missing password reset and recovery flow.
+- Removed hardcoded URLs and replaced them with NEXT_PUBLIC_APP_URL.
+- Addressed React hook exhaust-deps warnings in agent dashboards.

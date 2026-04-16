@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createBrowserClient } from "@/lib/supabase";
 import { Loader2, Plus, Minus, Search } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -39,9 +39,9 @@ export default function AgentInventory() {
           });
       }
     });
-  }, [supabase]);
+  }, [supabase, fetchInventory]);
 
-  const fetchInventory = async (sellerId: string) => {
+  const fetchInventory = useCallback(async (sellerId: string) => {
     const { data } = await supabase
       .from('products')
       .select('id, name, photo_url, category, stock, active')
@@ -50,7 +50,7 @@ export default function AgentInventory() {
 
     setProducts(data || []);
     setLoading(false);
-  };
+  }, [supabase]);
 
   const updateStock = async (id: string, currentStock: number, delta: number) => {
     const newStock = currentStock + delta;

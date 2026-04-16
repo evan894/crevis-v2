@@ -323,10 +323,10 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2">
                 <Link2 className="w-3.5 h-3.5 text-saffron shrink-0" />
                 <span className="font-dm-sans text-xs text-ink truncate flex-1">
-                  {(process.env.NEXT_PUBLIC_APP_URL || "https://crevis-v2.vercel.app")}/s/{shopSlug}
+                  {(process.env.NEXT_PUBLIC_APP_URL || "https://crevis.in")}/s/{shopSlug}
                 </span>
                 <div className="flex items-center gap-2 shrink-0 border-l border-border pl-2 ml-1">
-                  <button id="copy-shoplink" onClick={() => handleCopyDashboard(`${process.env.NEXT_PUBLIC_APP_URL || "https://crevis-v2.vercel.app"}/s/${shopSlug}`, "shoplink")}
+                  <button id="copy-shoplink" onClick={() => handleCopyDashboard(`${process.env.NEXT_PUBLIC_APP_URL || "https://crevis.in"}/s/${shopSlug}`, "shoplink")}
                     className="text-[11px] font-medium text-ink-secondary hover:text-saffron transition-colors flex items-center gap-1">
                     <Copy className="w-3 h-3" /> Copy
                   </button>
