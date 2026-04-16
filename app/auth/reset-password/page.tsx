@@ -12,6 +12,7 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [isExpired, setIsExpired] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [ready, setReady] = useState(false);
   
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -22,21 +23,38 @@ export default function ResetPasswordPage() {
   const supabase = createBrowserClient();
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        setIsExpired(true);
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          if (event === 'PASSWORD_RECOVERY') {
+            setReady(true);
+            setLoading(false);
+          } else if (event === 'SIGNED_OUT' || !session) {
+            setIsExpired(true);
+            setLoading(false);
+          }
+        }
+      );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setReady(true);
+        setLoading(false);
       }
-      setLoading(false);
-    };
-    
-    // In strict mode, avoid double-firing fast. Wait for hash fragment to process.
-    const timer = setTimeout(() => {
-       checkSession();
-    }, 500);
-    return () => clearTimeout(timer);
+    });
+
+    return () => subscription.unsubscribe();
   }, [supabase]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!ready && !isExpired && !isSuccess) {
+        setIsExpired(true);
+        setLoading(false);
+      }
+    }, 5000);
+    return () => clearTimeout(timeout);
+  }, [ready, isExpired, isSuccess]);
 
   // Password strength logic
   const getStrength = (pw: string) => {
