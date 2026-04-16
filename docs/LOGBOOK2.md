@@ -128,3 +128,19 @@ Copy this block at end of every session:
 **Next session:** [ ] Verify Google OAuth flow works in production.
 **Env state:** Supabase / Bot ✅ / Razorpay / Vercel / Resend
 ---
+
+### Domain System Consolidation — April 16, 2026 — 15m spent
+**Status:** ✅ Completed
+**Built:** 
+- Eliminated all hardcoded `vercel.app` and `localhost` domain references codebase wide (`bot/handlers/pharmacy.ts`, `bot/handlers/buy.ts`).
+- Standardized fallback domains to `https://crevis.in`.
+- Resolved `app/auth/reset-password/page.tsx` tokens timing collision with a unified `useEffect` utilizing robust `onAuthStateChange` logic.
+- Validated auth handler `redirectTo` and `emailRedirectTo` safety.
+- Handled NEXT_PUBLIC_APP_URL exposure to client environment in `next.config.mjs`.
+**Bugs fixed:** 
+- Password recovery timing glitch causing expired state incorrectly on valid links.
+**Deferred:** None
+**Blockers:** None
+**Next session:** [ ] Smoke test domain parity in production.
+**Env state:** Supabase / Bot ✅ / Razorpay / Vercel / Resend
+---

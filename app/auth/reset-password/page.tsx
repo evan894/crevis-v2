@@ -12,7 +12,7 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [isExpired, setIsExpired] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [ready, setReady] = useState(false);
+
   
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -23,38 +23,55 @@ export default function ResetPasswordPage() {
   const supabase = createBrowserClient();
 
   useEffect(() => {
+    let resolved = false;
+
+    // Listen for PASSWORD_RECOVERY event
+    // This fires when Supabase processes the 
+    // reset token from the URL hash
     const { data: { subscription } } =
       supabase.auth.onAuthStateChange(
         async (event, session) => {
+          if (resolved) return;
+          
           if (event === 'PASSWORD_RECOVERY') {
-            setReady(true);
+            resolved = true;
             setLoading(false);
-          } else if (event === 'SIGNED_OUT' || !session) {
-            setIsExpired(true);
+          } else if (
+            event === 'SIGNED_IN' && session
+          ) {
+            resolved = true;
             setLoading(false);
           }
         }
       );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setReady(true);
-        setLoading(false);
+    // Also check existing session immediately
+    // in case token was already processed
+    supabase.auth.getSession().then(
+      ({ data: { session } }) => {
+        if (resolved) return;
+        if (session) {
+          resolved = true;
+          setLoading(false);
+        }
       }
-    });
+    );
 
-    return () => subscription.unsubscribe();
-  }, [supabase]);
-
-  useEffect(() => {
+    // Timeout fallback — if nothing fires 
+    // in 6 seconds, show expired
     const timeout = setTimeout(() => {
-      if (!ready && !isExpired && !isSuccess) {
+      if (!resolved) {
+        resolved = true;
         setIsExpired(true);
         setLoading(false);
       }
-    }, 5000);
-    return () => clearTimeout(timeout);
-  }, [ready, isExpired, isSuccess]);
+    }, 6000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
+  }, [supabase]);
 
   // Password strength logic
   const getStrength = (pw: string) => {

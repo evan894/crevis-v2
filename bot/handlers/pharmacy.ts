@@ -38,7 +38,7 @@ async function proceedToCartPayment(ctx: BotContext) {
   const cart = ctx.session.pharmacyCart ?? [];
   const sentMsg = await ctx.reply('Creating secure payment link... ⏳');
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://crevis.in';
     const res = await fetch(`${appUrl}/api/payment/create-pharmacy-cart`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
