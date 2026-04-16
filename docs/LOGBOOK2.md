@@ -115,3 +115,16 @@ Copy this block at end of every session:
 - Built missing password reset and recovery flow.
 - Removed hardcoded URLs and replaced them with NEXT_PUBLIC_APP_URL.
 - Addressed React hook exhaust-deps warnings in agent dashboards.
+
+### Auth Enhancements — April 16, 2026 — 10m spent
+**Status:** ✅ Completed
+**Built:** 
+- Added Google OAuth sign in button and divider to the authentication page.
+- Implemented `handleGoogleSignIn` function using Supabase OAuth with Google provider.
+- Configured proper redirect to the `/auth/callback` route.
+**Bugs fixed:** None
+**Deferred:** None
+**Blockers:** None
+**Next session:** [ ] Verify Google OAuth flow works in production.
+**Env state:** Supabase / Bot ✅ / Razorpay / Vercel / Resend
+---
