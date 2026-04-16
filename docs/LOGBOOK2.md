@@ -91,3 +91,18 @@ Copy this block at end of every session:
 **Next session:** [ ] E2E testing of the packing and delivery flow on actual devices or simulators.
 **Env state:** Supabase / Bot ✅ / Razorpay / Vercel / Resend
 ---
+
+### Production Fixes — April 16, 2026 — 1h spent
+**Status:** ✅ Completed
+**Built:** 
+- Centralized `signOut` utility in `lib/auth-actions.ts` utilizing hard redirects.
+- Added sign-out functionality reliably across all layouts (Owner sidebar, mobile nav, Sales Agent top bar, Delivery top bar, Admin top nav, Onboarding page).
+- Built `auth/forgot-password/page.tsx` with rate limit handling and correct Supabase methods.
+- Built `auth/reset-password/page.tsx` with dynamic token validation, password strength checker, and UI feedback.
+- Auth callback route properly implemented with onboarding verification and role-based redirects.
+**Bugs fixed:** None
+**Deferred:** None
+**Blockers:** None
+**Next session:** [ ] Manual verification via end-to-end tests on branch before merge.
+**Env state:** Supabase / Bot ✅ / Razorpay / Vercel / Resend
+---

@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase";
 import { LogOut } from "lucide-react";
+import { signOut } from "@/lib/auth-actions";
 
 export default function DeliveryAgentLayout({ children }: { children: React.ReactNode }) {
   const [shopName, setShopName] = useState("");
-  const router = useRouter();
+  const [firstName, setFirstName] = useState("");
   const supabase = createBrowserClient();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data?.user) {
+        setFirstName(data.user.user_metadata?.full_name?.split(" ")[0] || "");
         supabase
           .from("store_members")
           .select("sellers(shop_name)")
@@ -27,11 +28,6 @@ export default function DeliveryAgentLayout({ children }: { children: React.Reac
       }
     });
   }, [supabase]);
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/auth");
-  };
 
   return (
     <div className="flex flex-col min-h-screen bg-surface-raised font-dm-sans sm:hidden">
@@ -48,13 +44,17 @@ export default function DeliveryAgentLayout({ children }: { children: React.Reac
             </span>
           </span>
         </div>
-        <button
-          onClick={handleSignOut}
-          className="flex items-center text-ink-muted hover:text-error transition-colors"
-          title="Sign Out"
-        >
-          <LogOut className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-3">
+          {firstName && <span className="text-sm font-medium text-ink-secondary">{firstName}</span>}
+          <button
+            onClick={signOut}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-ink-muted hover:text-error hover:bg-error-bg rounded-md transition-colors"
+            title="Sign out"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign out
+          </button>
+        </div>
       </header>
 
       {/* Main Content */}

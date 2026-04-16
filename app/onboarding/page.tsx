@@ -7,6 +7,7 @@ import { Loader2, CheckCircle2, Ticket } from "lucide-react";
 import confetti from "canvas-confetti";
 import { CATEGORIES } from "@/lib/constants";
 import { toast } from "react-hot-toast";
+import { signOut } from "@/lib/auth-actions";
 
 function OnboardingContent() {
   const searchParams = useSearchParams();
@@ -128,8 +129,16 @@ function OnboardingContent() {
   const isSlackSuccess = searchParams.get("connected") === "true";
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col items-center py-12 px-6 selection:bg-saffron selection:text-surface-raised">
+    <div className="min-h-screen bg-surface flex flex-col items-center py-12 px-6 selection:bg-saffron selection:text-surface-raised relative border-test">
       
+      {/* Top right sign out */}
+      <button 
+        onClick={signOut}
+        className="absolute top-6 right-6 text-xs text-ink-muted hover:text-ink transition-colors font-dm-sans"
+      >
+        Sign out
+      </button>
+
       {/* Progress Bar */}
       <div className="w-full max-w-md mb-12">
         <div className="flex justify-between mb-2">

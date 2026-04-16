@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createBrowserClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 
 export default function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -163,6 +164,17 @@ export default function AuthPage() {
                 placeholder="••••••••"
               />
             </div>
+
+            {!isSignUp && (
+              <div className="flex justify-end pt-1">
+                <Link 
+                  href="/auth/forgot-password"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            )}
 
             <button
               type="submit"

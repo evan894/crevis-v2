@@ -1,11 +1,36 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, PackageOpen, ShoppingBag, Wallet, Settings, Users, CreditCard, TrendingUp } from "lucide-react";
+import { LayoutDashboard, PackageOpen, ShoppingBag, Wallet, Settings, Users, CreditCard, TrendingUp, LogOut } from "lucide-react";
+import { signOut } from "@/lib/auth-actions";
+import { createBrowserClient } from "@/lib/supabase";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const [shopName, setShopName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const pathname = usePathname();
+  const supabase = createBrowserClient();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        setUserEmail(data.user.email || "");
+        supabase
+          .from("store_members")
+          .select("sellers(shop_name)")
+          .eq("user_id", data.user.id)
+          .single()
+          .then((res) => {
+             const sellers = res.data?.sellers as unknown as { shop_name: string };
+             if (sellers?.shop_name) {
+               setShopName(sellers.shop_name);
+             }
+          });
+      }
+    });
+  }, [supabase]);
 
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -44,6 +69,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+
+        <div className="p-4 border-t border-border mt-auto">
+          {userEmail && (
+            <div className="mb-3 px-2 flex flex-col">
+              <span className="text-sm font-medium text-ink truncate">{shopName || "Loading..."}</span>
+              <span className="text-xs text-ink-muted truncate">{userEmail}</span>
+            </div>
+          )}
+          <button
+            onClick={signOut}
+            className="flex items-center gap-3 w-full px-4 py-3 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign out
+          </button>
+        </div>
       </aside>
 
       {/* Main Content Area */}
@@ -64,6 +105,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Link>
             );
          })}
+         <button onClick={signOut} className="flex flex-col items-center justify-center w-full h-full space-y-1 text-ink-muted hover:text-destructive">
+            <LogOut className="w-5 h-5 text-muted-foreground" />
+            <span className="text-[10px] font-medium select-none">Sign out</span>
+         </button>
       </nav>
     </div>
   );
