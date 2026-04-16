@@ -144,3 +144,17 @@ Copy this block at end of every session:
 **Next session:** [ ] Smoke test domain parity in production.
 **Env state:** Supabase / Bot ✅ / Razorpay / Vercel / Resend
 ---
+
+### OAuth Redirect Patch — April 16, 2026 — 5m spent
+**Status:** ✅ Completed
+**Built:** 
+- Configured Google OAuth `handleGoogleSignIn` to redirect to `${NEXT_PUBLIC_APP_URL}/auth/callback` utilizing `prompt: 'consent'` and `access_type: 'offline'`.
+- Implemented `googleLoading` conditional rendering hook inside auth UI page button to provide immediate loading cues upon attempting Google login.
+- Validated `app/auth/callback/route.ts` successfully exchanges Google OAuth keys and natively redirects correctly to `/dashboard` or `/onboarding` depending on the presence of a seller record.
+**Bugs fixed:** 
+- Ensure Google OAuth correctly lands within the app's `callback` route properly routing to `/dashboard` instead of halting on a direct Supabase instance URL.
+**Deferred:** None
+**Blockers:** None
+**Next session:** [ ] Test OAuth login locally before deploying patch.
+**Env state:** Supabase / Bot ✅ / Razorpay / Vercel / Resend
+---
