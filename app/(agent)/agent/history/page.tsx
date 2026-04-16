@@ -23,24 +23,6 @@ export default function AgentHistory() {
 
   const supabase = createBrowserClient();
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) {
-        supabase
-          .from("store_members")
-          .select("seller_id")
-          .eq("user_id", data.user.id)
-          .eq("is_active", true)
-          .single()
-          .then((res) => {
-             if (res.data?.seller_id) {
-               fetchHistory(res.data.seller_id);
-             }
-          });
-      }
-    });
-  }, [supabase, fetchHistory]);
-
   const fetchHistory = useCallback(async (sellerId: string) => {
     const { data } = await supabase
       .from('orders')
@@ -59,6 +41,24 @@ export default function AgentHistory() {
     setOrders((data as unknown as Order[]) || []);
     setLoading(false);
   }, [supabase]);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        supabase
+          .from("store_members")
+          .select("seller_id")
+          .eq("user_id", data.user.id)
+          .eq("is_active", true)
+          .single()
+          .then((res) => {
+             if (res.data?.seller_id) {
+               fetchHistory(res.data.seller_id);
+             }
+          });
+      }
+    });
+  }, [supabase, fetchHistory]);
 
   const filteredOrders = orders.filter(o => {
     const d = new Date(o.created_at);

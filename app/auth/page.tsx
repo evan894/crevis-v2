@@ -121,7 +121,7 @@ export default function AuthPage() {
             </p>
             {view === "confirm-email" && (
               <p className="font-dm-sans text-xs text-ink-muted mt-2">
-                Didn't receive it? Check your spam folder or contact support.
+                Didn&apos;t receive it? Check your spam folder or contact support.
               </p>
             )}
           </div>

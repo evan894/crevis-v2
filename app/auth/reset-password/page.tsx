@@ -106,7 +106,7 @@ export default function ResetPasswordPage() {
             Create a new password.
           </h2>
           <p className="font-dm-sans text-base text-ink-secondary">
-            Make sure it's strong and secure to keep your shop protected.
+            Make sure it&apos;s strong and secure to keep your shop protected.
           </p>
         </div>
       </div>

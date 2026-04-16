@@ -23,6 +23,17 @@ export default function AgentInventory() {
 
   const supabase = createBrowserClient();
 
+  const fetchInventory = useCallback(async (sellerId: string) => {
+    const { data } = await supabase
+      .from('products')
+      .select('id, name, photo_url, category, stock, active')
+      .eq('seller_id', sellerId)
+      .order('created_at', { ascending: false });
+
+    setProducts(data || []);
+    setLoading(false);
+  }, [supabase]);
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data?.user) {
@@ -40,17 +51,6 @@ export default function AgentInventory() {
       }
     });
   }, [supabase, fetchInventory]);
-
-  const fetchInventory = useCallback(async (sellerId: string) => {
-    const { data } = await supabase
-      .from('products')
-      .select('id, name, photo_url, category, stock, active')
-      .eq('seller_id', sellerId)
-      .order('created_at', { ascending: false });
-
-    setProducts(data || []);
-    setLoading(false);
-  }, [supabase]);
 
   const updateStock = async (id: string, currentStock: number, delta: number) => {
     const newStock = currentStock + delta;

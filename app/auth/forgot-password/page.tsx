@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { createBrowserClient } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
 import { Loader2, Mail } from "lucide-react";
 import Link from "next/link";
 
@@ -12,7 +11,6 @@ export default function ForgotPasswordPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const router = useRouter();
   const supabase = createBrowserClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,7 +96,7 @@ export default function ForgotPasswordPage() {
                  <h2 className="font-syne text-xl font-bold text-ink">Check your email</h2>
                  <p className="font-dm-sans text-sm text-ink-muted">
                    We sent a reset link to <span className="font-medium text-ink-secondary">{email}</span>.
-                   <br />It may take a minute to arrive. Check your spam folder if you don't see it.
+                   <br />It may take a minute to arrive. Check your spam folder if you don&apos;t see it.
                  </p>
                </div>
                <Link
@@ -115,7 +113,7 @@ export default function ForgotPasswordPage() {
                   Forgot your password?
                 </h2>
                 <p className="font-dm-sans text-sm text-ink-muted">
-                  Enter your email and we'll send you a link to reset it.
+                  Enter your email and we&apos;ll send you a link to reset it.
                 </p>
               </div>
 
